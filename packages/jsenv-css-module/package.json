@@ -1,0 +1,49 @@
+{
+  "name": "@jsenv/css-module",
+  "version": "1.0.0",
+  "description": "Enable css module in jsenv.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/jsenv-core",
+    "directory": "packages/jsenv-css-module"
+  },
+  "engines": {
+    "node": ">=13.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./main.js",
+      "require": "./dist/commonjs/main.cjs"
+    },
+    "./": "./"
+  },
+  "module": "main.js",
+  "main": "dist/commonjs/main.cjs",
+  "files": [
+    "/dist/",
+    "/src/",
+    "/main.js"
+  ],
+  "dependencies": {
+    "@jsenv/util": "4.0.4"
+  },
+  "devDependencies": {
+    "@jsenv/node-module-import-map": "12.2.2"
+  },
+  "peerDependencies": {
+    "@jsenv/core": "*"
+  },
+  "scripts": {
+    "generate-commonjs-build": "node ./script/generate-commonjs-build/generate-commonjs-build.js",
+    "generate-import-map": "node ./script/generate-import-map/generate-import-map.js",
+    "dist": "npm run generate-commonjs-build",
+    "postinstall": "npm run generate-import-map",
+    "prepublishOnly": "node ./script/transform-package/remove-postinstall.js && npm run dist",
+    "postpublish": "node ./script/transform-package/restore-postinstall.js"
+  }
+}
