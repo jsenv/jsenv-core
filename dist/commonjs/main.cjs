@@ -1493,8 +1493,8 @@ const jsenvExploringRedirectorJsRelativeUrl = "./src/internal/exploring/explorin
 const jsenvExploringRedirectorJsBuildRelativeUrl = "./dist/jsenv-exploring-redirector.js";
 const jsenvExploringRedirectorJsUrl = util.resolveUrl(jsenvExploringRedirectorJsRelativeUrl, jsenvCoreDirectoryUrl);
 const jsenvExploringRedirectorJsBuildUrl = util.resolveUrl(jsenvExploringRedirectorJsBuildRelativeUrl, jsenvCoreDirectoryUrl); // Exploring index and toolbar
-
-const jsenvExploringHtmlUrl = util.resolveUrl("./src/internal/exploring/exploring.html", jsenvCoreDirectoryUrl);
+const jsenvExploringIndexJsBuildUrl = util.resolveUrl("./dist/jsenv-exploring-index.js", jsenvCoreDirectoryUrl);
+const jsenvExploringIndexHtmlUrl = util.resolveUrl("./src/internal/exploring/exploring.html", jsenvCoreDirectoryUrl);
 const jsenvToolbarHtmlUrl = util.resolveUrl("./src/internal/toolbar/toolbar.html", jsenvCoreDirectoryUrl);
 const jsenvToolbarInjectorBuildRelativeUrl = "./dist/jsenv-toolbar-injector.js";
 const jsenvToolbarInjectorBuildUrl = util.resolveUrl(jsenvToolbarInjectorBuildRelativeUrl, jsenvCoreDirectoryUrl);
@@ -2034,7 +2034,7 @@ const getOrGenerateCompiledFile = async ({
   cacheInterProcessLocking = false,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
-  fileContentFallbackIfNotFound,
+  fileContentFallback,
   ifEtagMatch,
   ifModifiedSinceDate,
   compile
@@ -2081,7 +2081,7 @@ const getOrGenerateCompiledFile = async ({
       originalFileUrl,
       compiledFileUrl,
       compile,
-      fileContentFallbackIfNotFound,
+      fileContentFallback,
       ifEtagMatch,
       ifModifiedSinceDate,
       useFilesystemAsCache,
@@ -2123,7 +2123,7 @@ const computeCompileReport = async ({
   originalFileUrl,
   compiledFileUrl,
   compile,
-  fileContentFallbackIfNotFound,
+  fileContentFallback,
   ifEtagMatch,
   ifModifiedSinceDate,
   useFilesystemAsCache,
@@ -2146,7 +2146,7 @@ const computeCompileReport = async ({
     const [compileTiming, compileResult] = await server.timeFunction("compile", () => callCompile({
       logger,
       originalFileUrl,
-      fileContentFallbackIfNotFound,
+      fileContentFallback,
       compile
     }));
     return {
@@ -2173,7 +2173,7 @@ const computeCompileReport = async ({
     const [compileTiming, compileResult] = await server.timeFunction("compile", () => callCompile({
       logger,
       originalFileUrl,
-      fileContentFallbackIfNotFound,
+      fileContentFallback,
       compile
     }));
     return {
@@ -2217,13 +2217,13 @@ const computeCompileReport = async ({
 const callCompile = async ({
   logger,
   originalFileUrl,
-  fileContentFallbackIfNotFound,
+  fileContentFallback,
   compile
 }) => {
   logger.debug(`compile ${originalFileUrl}`);
   const compileArgs = compile.length === 0 ? [] : await getArgumentsForCompile({
     originalFileUrl,
-    fileContentFallbackIfNotFound
+    fileContentFallback
   });
   const {
     sources = [],
@@ -2256,16 +2256,16 @@ const callCompile = async ({
 
 const getArgumentsForCompile = async ({
   originalFileUrl,
-  fileContentFallbackIfNotFound
+  fileContentFallback
 }) => {
   let fileContent;
 
-  if (fileContentFallbackIfNotFound) {
+  if (fileContentFallback) {
     try {
       fileContent = await readFileContent(originalFileUrl);
     } catch (e) {
       if (e.code === "ENOENT") {
-        fileContent = fileContentFallbackIfNotFound;
+        fileContent = await fileContentFallback();
       } else {
         throw e;
       }
@@ -2329,7 +2329,7 @@ const compileFile = async ({
   projectDirectoryUrl,
   originalFileUrl,
   compiledFileUrl,
-  fileContentFallbackIfNotFound,
+  fileContentFallback,
   projectFileRequestedCallback = () => {},
   request,
   compile,
@@ -2382,7 +2382,7 @@ const compileFile = async ({
       projectDirectoryUrl,
       originalFileUrl,
       compiledFileUrl,
-      fileContentFallbackIfNotFound,
+      fileContentFallback,
       ifEtagMatch,
       ifModifiedSinceDate,
       writeOnFilesystem,
@@ -5922,7 +5922,7 @@ const lineRangeWithinLines = ({
 // https://nodejs.org/api/modules.html#modules_module_builtinmodules
 // https://stackoverflow.com/a/35825896
 // https://github.com/browserify/resolve/blob/master/lib/core.json#L1
-const NATIVE_NODE_MODULE_SPECIFIER_ARRAY = ["assert", "async_hooks", "buffer_ieee754", "buffer", "child_process", "cluster", "console", "constants", "crypto", "_debugger", "dgram", "dns", "domain", "events", "freelist", "fs", "fs/promises", "_http_agent", "_http_client", "_http_common", "_http_incoming", "_http_outgoing", "_http_server", "http", "http2", "https", "inspector", "_linklist", "module", "net", "node-inspect/lib/_inspect", "node-inspect/lib/internal/inspect_client", "node-inspect/lib/internal/inspect_repl", "os", "path", "perf_hooks", "process", "punycode", "querystring", "readline", "repl", "smalloc", "_stream_duplex", "_stream_transform", "_stream_wrap", "_stream_passthrough", "_stream_readable", "_stream_writable", "stream", "string_decoder", "sys", "timers", "_tls_common", "_tls_legacy", "_tls_wrap", "tls", "trace_events", "tty", "url", "util", "v8/tools/arguments", "v8/tools/codemap", "v8/tools/consarray", "v8/tools/csvparser", "v8/tools/logreader", "v8/tools/profile_view", "v8/tools/splaytree", "v8", "vm", "worker_threads", "zlib", // global is special
+const NATIVE_NODE_MODULE_SPECIFIER_ARRAY = ["assert", "assert/strict", "async_hooks", "buffer_ieee754", "buffer", "child_process", "cluster", "console", "constants", "crypto", "_debugger", "dgram", "dns", "domain", "events", "freelist", "fs", "fs/promises", "_http_agent", "_http_client", "_http_common", "_http_incoming", "_http_outgoing", "_http_server", "http", "http2", "https", "inspector", "_linklist", "module", "net", "node-inspect/lib/_inspect", "node-inspect/lib/internal/inspect_client", "node-inspect/lib/internal/inspect_repl", "os", "path", "perf_hooks", "process", "punycode", "querystring", "readline", "repl", "smalloc", "_stream_duplex", "_stream_transform", "_stream_wrap", "_stream_passthrough", "_stream_readable", "_stream_writable", "stream", "stream/promises", "string_decoder", "sys", "timers", "_tls_common", "_tls_legacy", "_tls_wrap", "tls", "trace_events", "tty", "url", "util", "v8/tools/arguments", "v8/tools/codemap", "v8/tools/consarray", "v8/tools/csvparser", "v8/tools/logreader", "v8/tools/profile_view", "v8/tools/splaytree", "v8", "vm", "worker_threads", "zlib", // global is special
 "global"];
 const isBareSpecifierForNativeNodeModule = specifier => {
   return NATIVE_NODE_MODULE_SPECIFIER_ARRAY.includes(specifier);
@@ -8733,7 +8733,9 @@ const jsenvCompilerForImportmap = ({
   const importMapFileUrl = util.resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl);
   return {
     // allow project to have no importmap
-    fileContentFallbackIfNotFound: originalFileUrl === importMapFileUrl ? "{}" : undefined,
+    fileContentFallback: () => {
+      return originalFileUrl === importMapFileUrl ? "{}" : undefined;
+    },
     compile: importmapBeforeTransformation => {
       return transformImportmap(importmapBeforeTransformation, {
         originalFileUrl
@@ -13495,8 +13497,10 @@ const createRedirectFilesService = ({
 }) => {
   const jsenvExploringRedirectorHtmlRelativeUrlForProject = util.urlToRelativeUrl(jsenvExploringRedirectorHtmlUrl, projectDirectoryUrl);
   const jsenvExploringRedirectorJsBuildRelativeUrlForProject = util.urlToRelativeUrl(jsenvExploringRedirectorJsBuildUrl, projectDirectoryUrl);
+  const jsenvExploringJsBuildRelativeUrlForProject = util.urlToRelativeUrl(jsenvExploringIndexJsBuildUrl, projectDirectoryUrl);
   const jsenvToolbarJsBuildRelativeUrlForProject = util.urlToRelativeUrl(jsenvToolbarJsBuildUrl, projectDirectoryUrl);
   return request => {
+    // exploring redirection
     if (request.ressource === "/") {
       const jsenvExploringRedirectorHtmlServerUrl = `${request.origin}/${jsenvExploringRedirectorHtmlRelativeUrlForProject}`;
       return {
@@ -13506,6 +13510,28 @@ const createRedirectFilesService = ({
         }
       };
     }
+
+    if (request.ressource === "/.jsenv/exploring.redirector.js") {
+      const jsenvExploringRedirectorBuildServerUrl = `${request.origin}/${jsenvExploringRedirectorJsBuildRelativeUrlForProject}`;
+      return {
+        status: 307,
+        headers: {
+          location: jsenvExploringRedirectorBuildServerUrl
+        }
+      };
+    } // exploring index
+
+
+    if (request.ressource === "/.jsenv/exploring.index.js") {
+      const jsenvExploringJsBuildServerUrl = `${request.origin}/${jsenvExploringJsBuildRelativeUrlForProject}`;
+      return {
+        status: 307,
+        headers: {
+          location: jsenvExploringJsBuildServerUrl
+        }
+      };
+    } // toolbar
+
 
     if (request.ressource === "/.jsenv/toolbar.main.js") {
       const jsenvToolbarJsBuildServerUrl = `${request.origin}/${jsenvToolbarJsBuildRelativeUrlForProject}`;
@@ -13532,16 +13558,6 @@ const createRedirectFilesService = ({
       };
     }
 
-    if (request.ressource === "/.jsenv/exploring.redirector.js") {
-      const jsenvExploringRedirectorBuildServerUrl = `${request.origin}/${jsenvExploringRedirectorJsBuildRelativeUrlForProject}`;
-      return {
-        status: 307,
-        headers: {
-          location: jsenvExploringRedirectorBuildServerUrl
-        }
-      };
-    }
-
     return null;
   };
 };
@@ -13557,7 +13573,7 @@ const createExploringDataService = ({
         projectDirectoryUrl,
         outDirectoryRelativeUrl,
         jsenvDirectoryRelativeUrl: util.urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl),
-        exploringHtmlFileRelativeUrl: util.urlToRelativeUrl(jsenvExploringHtmlUrl, projectDirectoryUrl),
+        exploringHtmlFileRelativeUrl: util.urlToRelativeUrl(jsenvExploringIndexHtmlUrl, projectDirectoryUrl),
         sourcemapMainFileRelativeUrl: util.urlToRelativeUrl(sourcemapMainFileUrl, jsenvCoreDirectoryUrl),
         sourcemapMappingFileRelativeUrl: util.urlToRelativeUrl(sourcemapMappingFileUrl, jsenvCoreDirectoryUrl),
         explorableConfig
