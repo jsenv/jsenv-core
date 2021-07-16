@@ -23,7 +23,7 @@ Add a `customCompilers` export into `jsenv.config.js`:
 ```js
 import { jsenvCompilerForSass } from "@jsenv/sass"
 
-export const customCompilers = [jsenvCompilerForSass]
+export const customCompilers = { ...jsenvCompilerForSass }
 ```
 
 </details>

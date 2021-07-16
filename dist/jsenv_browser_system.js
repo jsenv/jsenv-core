@@ -69,343 +69,6 @@
 
   var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
-  var assertImportMap = function assertImportMap(value) {
-    if (value === null) {
-      throw new TypeError("an importMap must be an object, got null");
-    }
-
-    var type = _typeof(value);
-
-    if (type !== "object") {
-      throw new TypeError("an importMap must be an object, received ".concat(value));
-    }
-
-    if (Array.isArray(value)) {
-      throw new TypeError("an importMap must be an object, received array ".concat(value));
-    }
-  };
-
-  var hasScheme = function hasScheme(string) {
-    return /^[a-zA-Z]{2,}:/.test(string);
-  };
-
-  var urlToScheme = function urlToScheme(urlString) {
-    var colonIndex = urlString.indexOf(":");
-    if (colonIndex === -1) return "";
-    return urlString.slice(0, colonIndex);
-  };
-
-  var urlToPathname$1 = function urlToPathname(urlString) {
-    return ressourceToPathname(urlToRessource(urlString));
-  };
-
-  var urlToRessource = function urlToRessource(urlString) {
-    var scheme = urlToScheme(urlString);
-
-    if (scheme === "file") {
-      return urlString.slice("file://".length);
-    }
-
-    if (scheme === "https" || scheme === "http") {
-      // remove origin
-      var afterProtocol = urlString.slice(scheme.length + "://".length);
-      var pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
-      return afterProtocol.slice(pathnameSlashIndex);
-    }
-
-    return urlString.slice(scheme.length + 1);
-  };
-
-  var ressourceToPathname = function ressourceToPathname(ressource) {
-    var searchSeparatorIndex = ressource.indexOf("?");
-    return searchSeparatorIndex === -1 ? ressource : ressource.slice(0, searchSeparatorIndex);
-  };
-
-  var urlToOrigin = function urlToOrigin(urlString) {
-    var scheme = urlToScheme(urlString);
-
-    if (scheme === "file") {
-      return "file://";
-    }
-
-    if (scheme === "http" || scheme === "https") {
-      var secondProtocolSlashIndex = scheme.length + "://".length;
-      var pathnameSlashIndex = urlString.indexOf("/", secondProtocolSlashIndex);
-      if (pathnameSlashIndex === -1) return urlString;
-      return urlString.slice(0, pathnameSlashIndex);
-    }
-
-    return urlString.slice(0, scheme.length + 1);
-  };
-
-  var pathnameToParentPathname = function pathnameToParentPathname(pathname) {
-    var slashLastIndex = pathname.lastIndexOf("/");
-
-    if (slashLastIndex === -1) {
-      return "/";
-    }
-
-    return pathname.slice(0, slashLastIndex + 1);
-  };
-
-  // could be useful: https://url.spec.whatwg.org/#url-miscellaneous
-  var resolveUrl = function resolveUrl(specifier, baseUrl) {
-    if (baseUrl) {
-      if (typeof baseUrl !== "string") {
-        throw new TypeError(writeBaseUrlMustBeAString({
-          baseUrl: baseUrl,
-          specifier: specifier
-        }));
-      }
-
-      if (!hasScheme(baseUrl)) {
-        throw new Error(writeBaseUrlMustBeAbsolute({
-          baseUrl: baseUrl,
-          specifier: specifier
-        }));
-      }
-    }
-
-    if (hasScheme(specifier)) {
-      return specifier;
-    }
-
-    if (!baseUrl) {
-      throw new Error(writeBaseUrlRequired({
-        baseUrl: baseUrl,
-        specifier: specifier
-      }));
-    } // scheme relative
-
-
-    if (specifier.slice(0, 2) === "//") {
-      return "".concat(urlToScheme(baseUrl), ":").concat(specifier);
-    } // origin relative
-
-
-    if (specifier[0] === "/") {
-      return "".concat(urlToOrigin(baseUrl)).concat(specifier);
-    }
-
-    var baseOrigin = urlToOrigin(baseUrl);
-    var basePathname = urlToPathname$1(baseUrl);
-
-    if (specifier === ".") {
-      var baseDirectoryPathname = pathnameToParentPathname(basePathname);
-      return "".concat(baseOrigin).concat(baseDirectoryPathname);
-    } // pathname relative inside
-
-
-    if (specifier.slice(0, 2) === "./") {
-      var _baseDirectoryPathname = pathnameToParentPathname(basePathname);
-
-      return "".concat(baseOrigin).concat(_baseDirectoryPathname).concat(specifier.slice(2));
-    } // pathname relative outside
-
-
-    if (specifier.slice(0, 3) === "../") {
-      var unresolvedPathname = specifier;
-      var importerFolders = basePathname.split("/");
-      importerFolders.pop();
-
-      while (unresolvedPathname.slice(0, 3) === "../") {
-        unresolvedPathname = unresolvedPathname.slice(3); // when there is no folder left to resolved
-        // we just ignore '../'
-
-        if (importerFolders.length) {
-          importerFolders.pop();
-        }
-      }
-
-      var resolvedPathname = "".concat(importerFolders.join("/"), "/").concat(unresolvedPathname);
-      return "".concat(baseOrigin).concat(resolvedPathname);
-    } // bare
-
-
-    if (basePathname === "") {
-      return "".concat(baseOrigin, "/").concat(specifier);
-    }
-
-    if (basePathname[basePathname.length] === "/") {
-      return "".concat(baseOrigin).concat(basePathname).concat(specifier);
-    }
-
-    return "".concat(baseOrigin).concat(pathnameToParentPathname(basePathname)).concat(specifier);
-  };
-
-  var writeBaseUrlMustBeAString = function writeBaseUrlMustBeAString(_ref) {
-    var baseUrl = _ref.baseUrl,
-        specifier = _ref.specifier;
-    return "baseUrl must be a string.\n--- base url ---\n".concat(baseUrl, "\n--- specifier ---\n").concat(specifier);
-  };
-
-  var writeBaseUrlMustBeAbsolute = function writeBaseUrlMustBeAbsolute(_ref2) {
-    var baseUrl = _ref2.baseUrl,
-        specifier = _ref2.specifier;
-    return "baseUrl must be absolute.\n--- base url ---\n".concat(baseUrl, "\n--- specifier ---\n").concat(specifier);
-  };
-
-  var writeBaseUrlRequired = function writeBaseUrlRequired(_ref3) {
-    var baseUrl = _ref3.baseUrl,
-        specifier = _ref3.specifier;
-    return "baseUrl required to resolve relative specifier.\n--- base url ---\n".concat(baseUrl, "\n--- specifier ---\n").concat(specifier);
-  };
-
-  var tryUrlResolution = function tryUrlResolution(string, url) {
-    var result = resolveUrl(string, url);
-    return hasScheme(result) ? result : null;
-  };
-
-  var resolveSpecifier = function resolveSpecifier(specifier, importer) {
-    if (specifier === "." || specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
-      return resolveUrl(specifier, importer);
-    }
-
-    if (hasScheme(specifier)) {
-      return specifier;
-    }
-
-    return null;
-  };
-
-  var sortImports = function sortImports(imports) {
-    var mappingsSorted = {};
-    Object.keys(imports).sort(compareLengthOrLocaleCompare).forEach(function (name) {
-      mappingsSorted[name] = imports[name];
-    });
-    return mappingsSorted;
-  };
-  var sortScopes = function sortScopes(scopes) {
-    var scopesSorted = {};
-    Object.keys(scopes).sort(compareLengthOrLocaleCompare).forEach(function (scopeSpecifier) {
-      scopesSorted[scopeSpecifier] = sortImports(scopes[scopeSpecifier]);
-    });
-    return scopesSorted;
-  };
-
-  var compareLengthOrLocaleCompare = function compareLengthOrLocaleCompare(a, b) {
-    return b.length - a.length || a.localeCompare(b);
-  };
-
-  var normalizeImportMap = function normalizeImportMap(importMap, baseUrl) {
-    assertImportMap(importMap);
-
-    if (!isStringOrUrl(baseUrl)) {
-      throw new TypeError(formulateBaseUrlMustBeStringOrUrl({
-        baseUrl: baseUrl
-      }));
-    }
-
-    var imports = importMap.imports,
-        scopes = importMap.scopes;
-    return {
-      imports: imports ? normalizeMappings(imports, baseUrl) : undefined,
-      scopes: scopes ? normalizeScopes(scopes, baseUrl) : undefined
-    };
-  };
-
-  var isStringOrUrl = function isStringOrUrl(value) {
-    if (typeof value === "string") {
-      return true;
-    }
-
-    if (typeof URL === "function" && value instanceof URL) {
-      return true;
-    }
-
-    return false;
-  };
-
-  var normalizeMappings = function normalizeMappings(mappings, baseUrl) {
-    var mappingsNormalized = {};
-    Object.keys(mappings).forEach(function (specifier) {
-      var address = mappings[specifier];
-
-      if (typeof address !== "string") {
-        console.warn(formulateAddressMustBeAString({
-          address: address,
-          specifier: specifier
-        }));
-        return;
-      }
-
-      var specifierResolved = resolveSpecifier(specifier, baseUrl) || specifier;
-      var addressUrl = tryUrlResolution(address, baseUrl);
-
-      if (addressUrl === null) {
-        console.warn(formulateAdressResolutionFailed({
-          address: address,
-          baseUrl: baseUrl,
-          specifier: specifier
-        }));
-        return;
-      }
-
-      if (specifier.endsWith("/") && !addressUrl.endsWith("/")) {
-        console.warn(formulateAddressUrlRequiresTrailingSlash({
-          addressUrl: addressUrl,
-          address: address,
-          specifier: specifier
-        }));
-        return;
-      }
-
-      mappingsNormalized[specifierResolved] = addressUrl;
-    });
-    return sortImports(mappingsNormalized);
-  };
-
-  var normalizeScopes = function normalizeScopes(scopes, baseUrl) {
-    var scopesNormalized = {};
-    Object.keys(scopes).forEach(function (scopeSpecifier) {
-      var scopeMappings = scopes[scopeSpecifier];
-      var scopeUrl = tryUrlResolution(scopeSpecifier, baseUrl);
-
-      if (scopeUrl === null) {
-        console.warn(formulateScopeResolutionFailed({
-          scope: scopeSpecifier,
-          baseUrl: baseUrl
-        }));
-        return;
-      }
-
-      var scopeValueNormalized = normalizeMappings(scopeMappings, baseUrl);
-      scopesNormalized[scopeUrl] = scopeValueNormalized;
-    });
-    return sortScopes(scopesNormalized);
-  };
-
-  var formulateBaseUrlMustBeStringOrUrl = function formulateBaseUrlMustBeStringOrUrl(_ref) {
-    var baseUrl = _ref.baseUrl;
-    return "baseUrl must be a string or an url.\n--- base url ---\n".concat(baseUrl);
-  };
-
-  var formulateAddressMustBeAString = function formulateAddressMustBeAString(_ref2) {
-    var specifier = _ref2.specifier,
-        address = _ref2.address;
-    return "Address must be a string.\n--- address ---\n".concat(address, "\n--- specifier ---\n").concat(specifier);
-  };
-
-  var formulateAdressResolutionFailed = function formulateAdressResolutionFailed(_ref3) {
-    var address = _ref3.address,
-        baseUrl = _ref3.baseUrl,
-        specifier = _ref3.specifier;
-    return "Address url resolution failed.\n--- address ---\n".concat(address, "\n--- base url ---\n").concat(baseUrl, "\n--- specifier ---\n").concat(specifier);
-  };
-
-  var formulateAddressUrlRequiresTrailingSlash = function formulateAddressUrlRequiresTrailingSlash(_ref4) {
-    var addressURL = _ref4.addressURL,
-        address = _ref4.address,
-        specifier = _ref4.specifier;
-    return "Address must end with /.\n--- address url ---\n".concat(addressURL, "\n--- address ---\n").concat(address, "\n--- specifier ---\n").concat(specifier);
-  };
-
-  var formulateScopeResolutionFailed = function formulateScopeResolutionFailed(_ref5) {
-    var scope = _ref5.scope,
-        baseUrl = _ref5.baseUrl;
-    return "Scope url resolution failed.\n--- scope ---\n".concat(scope, "\n--- base url ---\n").concat(baseUrl);
-  };
-
   /* eslint-disable no-eq-null, eqeqeq */
   function arrayLikeToArray(arr, len) {
     if (len == null || len > arr.length) len = arr.length;
@@ -1238,6 +901,343 @@
     return uneval(value);
   };
 
+  var assertImportMap = function assertImportMap(value) {
+    if (value === null) {
+      throw new TypeError("an importMap must be an object, got null");
+    }
+
+    var type = _typeof(value);
+
+    if (type !== "object") {
+      throw new TypeError("an importMap must be an object, received ".concat(value));
+    }
+
+    if (Array.isArray(value)) {
+      throw new TypeError("an importMap must be an object, received array ".concat(value));
+    }
+  };
+
+  var hasScheme = function hasScheme(string) {
+    return /^[a-zA-Z]{2,}:/.test(string);
+  };
+
+  var urlToScheme = function urlToScheme(urlString) {
+    var colonIndex = urlString.indexOf(":");
+    if (colonIndex === -1) return "";
+    return urlString.slice(0, colonIndex);
+  };
+
+  var urlToPathname$1 = function urlToPathname(urlString) {
+    return ressourceToPathname(urlToRessource(urlString));
+  };
+
+  var urlToRessource = function urlToRessource(urlString) {
+    var scheme = urlToScheme(urlString);
+
+    if (scheme === "file") {
+      return urlString.slice("file://".length);
+    }
+
+    if (scheme === "https" || scheme === "http") {
+      // remove origin
+      var afterProtocol = urlString.slice(scheme.length + "://".length);
+      var pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
+      return afterProtocol.slice(pathnameSlashIndex);
+    }
+
+    return urlString.slice(scheme.length + 1);
+  };
+
+  var ressourceToPathname = function ressourceToPathname(ressource) {
+    var searchSeparatorIndex = ressource.indexOf("?");
+    return searchSeparatorIndex === -1 ? ressource : ressource.slice(0, searchSeparatorIndex);
+  };
+
+  var urlToOrigin = function urlToOrigin(urlString) {
+    var scheme = urlToScheme(urlString);
+
+    if (scheme === "file") {
+      return "file://";
+    }
+
+    if (scheme === "http" || scheme === "https") {
+      var secondProtocolSlashIndex = scheme.length + "://".length;
+      var pathnameSlashIndex = urlString.indexOf("/", secondProtocolSlashIndex);
+      if (pathnameSlashIndex === -1) return urlString;
+      return urlString.slice(0, pathnameSlashIndex);
+    }
+
+    return urlString.slice(0, scheme.length + 1);
+  };
+
+  var pathnameToParentPathname = function pathnameToParentPathname(pathname) {
+    var slashLastIndex = pathname.lastIndexOf("/");
+
+    if (slashLastIndex === -1) {
+      return "/";
+    }
+
+    return pathname.slice(0, slashLastIndex + 1);
+  };
+
+  // could be useful: https://url.spec.whatwg.org/#url-miscellaneous
+  var resolveUrl = function resolveUrl(specifier, baseUrl) {
+    if (baseUrl) {
+      if (typeof baseUrl !== "string") {
+        throw new TypeError(writeBaseUrlMustBeAString({
+          baseUrl: baseUrl,
+          specifier: specifier
+        }));
+      }
+
+      if (!hasScheme(baseUrl)) {
+        throw new Error(writeBaseUrlMustBeAbsolute({
+          baseUrl: baseUrl,
+          specifier: specifier
+        }));
+      }
+    }
+
+    if (hasScheme(specifier)) {
+      return specifier;
+    }
+
+    if (!baseUrl) {
+      throw new Error(writeBaseUrlRequired({
+        baseUrl: baseUrl,
+        specifier: specifier
+      }));
+    } // scheme relative
+
+
+    if (specifier.slice(0, 2) === "//") {
+      return "".concat(urlToScheme(baseUrl), ":").concat(specifier);
+    } // origin relative
+
+
+    if (specifier[0] === "/") {
+      return "".concat(urlToOrigin(baseUrl)).concat(specifier);
+    }
+
+    var baseOrigin = urlToOrigin(baseUrl);
+    var basePathname = urlToPathname$1(baseUrl);
+
+    if (specifier === ".") {
+      var baseDirectoryPathname = pathnameToParentPathname(basePathname);
+      return "".concat(baseOrigin).concat(baseDirectoryPathname);
+    } // pathname relative inside
+
+
+    if (specifier.slice(0, 2) === "./") {
+      var _baseDirectoryPathname = pathnameToParentPathname(basePathname);
+
+      return "".concat(baseOrigin).concat(_baseDirectoryPathname).concat(specifier.slice(2));
+    } // pathname relative outside
+
+
+    if (specifier.slice(0, 3) === "../") {
+      var unresolvedPathname = specifier;
+      var importerFolders = basePathname.split("/");
+      importerFolders.pop();
+
+      while (unresolvedPathname.slice(0, 3) === "../") {
+        unresolvedPathname = unresolvedPathname.slice(3); // when there is no folder left to resolved
+        // we just ignore '../'
+
+        if (importerFolders.length) {
+          importerFolders.pop();
+        }
+      }
+
+      var resolvedPathname = "".concat(importerFolders.join("/"), "/").concat(unresolvedPathname);
+      return "".concat(baseOrigin).concat(resolvedPathname);
+    } // bare
+
+
+    if (basePathname === "") {
+      return "".concat(baseOrigin, "/").concat(specifier);
+    }
+
+    if (basePathname[basePathname.length] === "/") {
+      return "".concat(baseOrigin).concat(basePathname).concat(specifier);
+    }
+
+    return "".concat(baseOrigin).concat(pathnameToParentPathname(basePathname)).concat(specifier);
+  };
+
+  var writeBaseUrlMustBeAString = function writeBaseUrlMustBeAString(_ref) {
+    var baseUrl = _ref.baseUrl,
+        specifier = _ref.specifier;
+    return "baseUrl must be a string.\n--- base url ---\n".concat(baseUrl, "\n--- specifier ---\n").concat(specifier);
+  };
+
+  var writeBaseUrlMustBeAbsolute = function writeBaseUrlMustBeAbsolute(_ref2) {
+    var baseUrl = _ref2.baseUrl,
+        specifier = _ref2.specifier;
+    return "baseUrl must be absolute.\n--- base url ---\n".concat(baseUrl, "\n--- specifier ---\n").concat(specifier);
+  };
+
+  var writeBaseUrlRequired = function writeBaseUrlRequired(_ref3) {
+    var baseUrl = _ref3.baseUrl,
+        specifier = _ref3.specifier;
+    return "baseUrl required to resolve relative specifier.\n--- base url ---\n".concat(baseUrl, "\n--- specifier ---\n").concat(specifier);
+  };
+
+  var tryUrlResolution = function tryUrlResolution(string, url) {
+    var result = resolveUrl(string, url);
+    return hasScheme(result) ? result : null;
+  };
+
+  var resolveSpecifier = function resolveSpecifier(specifier, importer) {
+    if (specifier === "." || specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
+      return resolveUrl(specifier, importer);
+    }
+
+    if (hasScheme(specifier)) {
+      return specifier;
+    }
+
+    return null;
+  };
+
+  var sortImports = function sortImports(imports) {
+    var mappingsSorted = {};
+    Object.keys(imports).sort(compareLengthOrLocaleCompare).forEach(function (name) {
+      mappingsSorted[name] = imports[name];
+    });
+    return mappingsSorted;
+  };
+  var sortScopes = function sortScopes(scopes) {
+    var scopesSorted = {};
+    Object.keys(scopes).sort(compareLengthOrLocaleCompare).forEach(function (scopeSpecifier) {
+      scopesSorted[scopeSpecifier] = sortImports(scopes[scopeSpecifier]);
+    });
+    return scopesSorted;
+  };
+
+  var compareLengthOrLocaleCompare = function compareLengthOrLocaleCompare(a, b) {
+    return b.length - a.length || a.localeCompare(b);
+  };
+
+  var normalizeImportMap = function normalizeImportMap(importMap, baseUrl) {
+    assertImportMap(importMap);
+
+    if (!isStringOrUrl(baseUrl)) {
+      throw new TypeError(formulateBaseUrlMustBeStringOrUrl({
+        baseUrl: baseUrl
+      }));
+    }
+
+    var imports = importMap.imports,
+        scopes = importMap.scopes;
+    return {
+      imports: imports ? normalizeMappings(imports, baseUrl) : undefined,
+      scopes: scopes ? normalizeScopes(scopes, baseUrl) : undefined
+    };
+  };
+
+  var isStringOrUrl = function isStringOrUrl(value) {
+    if (typeof value === "string") {
+      return true;
+    }
+
+    if (typeof URL === "function" && value instanceof URL) {
+      return true;
+    }
+
+    return false;
+  };
+
+  var normalizeMappings = function normalizeMappings(mappings, baseUrl) {
+    var mappingsNormalized = {};
+    Object.keys(mappings).forEach(function (specifier) {
+      var address = mappings[specifier];
+
+      if (typeof address !== "string") {
+        console.warn(formulateAddressMustBeAString({
+          address: address,
+          specifier: specifier
+        }));
+        return;
+      }
+
+      var specifierResolved = resolveSpecifier(specifier, baseUrl) || specifier;
+      var addressUrl = tryUrlResolution(address, baseUrl);
+
+      if (addressUrl === null) {
+        console.warn(formulateAdressResolutionFailed({
+          address: address,
+          baseUrl: baseUrl,
+          specifier: specifier
+        }));
+        return;
+      }
+
+      if (specifier.endsWith("/") && !addressUrl.endsWith("/")) {
+        console.warn(formulateAddressUrlRequiresTrailingSlash({
+          addressUrl: addressUrl,
+          address: address,
+          specifier: specifier
+        }));
+        return;
+      }
+
+      mappingsNormalized[specifierResolved] = addressUrl;
+    });
+    return sortImports(mappingsNormalized);
+  };
+
+  var normalizeScopes = function normalizeScopes(scopes, baseUrl) {
+    var scopesNormalized = {};
+    Object.keys(scopes).forEach(function (scopeSpecifier) {
+      var scopeMappings = scopes[scopeSpecifier];
+      var scopeUrl = tryUrlResolution(scopeSpecifier, baseUrl);
+
+      if (scopeUrl === null) {
+        console.warn(formulateScopeResolutionFailed({
+          scope: scopeSpecifier,
+          baseUrl: baseUrl
+        }));
+        return;
+      }
+
+      var scopeValueNormalized = normalizeMappings(scopeMappings, baseUrl);
+      scopesNormalized[scopeUrl] = scopeValueNormalized;
+    });
+    return sortScopes(scopesNormalized);
+  };
+
+  var formulateBaseUrlMustBeStringOrUrl = function formulateBaseUrlMustBeStringOrUrl(_ref) {
+    var baseUrl = _ref.baseUrl;
+    return "baseUrl must be a string or an url.\n--- base url ---\n".concat(baseUrl);
+  };
+
+  var formulateAddressMustBeAString = function formulateAddressMustBeAString(_ref2) {
+    var specifier = _ref2.specifier,
+        address = _ref2.address;
+    return "Address must be a string.\n--- address ---\n".concat(address, "\n--- specifier ---\n").concat(specifier);
+  };
+
+  var formulateAdressResolutionFailed = function formulateAdressResolutionFailed(_ref3) {
+    var address = _ref3.address,
+        baseUrl = _ref3.baseUrl,
+        specifier = _ref3.specifier;
+    return "Address url resolution failed.\n--- address ---\n".concat(address, "\n--- base url ---\n").concat(baseUrl, "\n--- specifier ---\n").concat(specifier);
+  };
+
+  var formulateAddressUrlRequiresTrailingSlash = function formulateAddressUrlRequiresTrailingSlash(_ref4) {
+    var addressURL = _ref4.addressURL,
+        address = _ref4.address,
+        specifier = _ref4.specifier;
+    return "Address must end with /.\n--- address url ---\n".concat(addressURL, "\n--- address ---\n").concat(address, "\n--- specifier ---\n").concat(specifier);
+  };
+
+  var formulateScopeResolutionFailed = function formulateScopeResolutionFailed(_ref5) {
+    var scope = _ref5.scope,
+        baseUrl = _ref5.baseUrl;
+    return "Scope url resolution failed.\n--- scope ---\n".concat(scope, "\n--- base url ---\n").concat(baseUrl);
+  };
+
   var memoize = function memoize(compute) {
     var memoized = false;
     var memoizedValue;
@@ -1769,6 +1769,8 @@
     return view.buffer;
   };
 
+  var _excluded = ["cancellationToken", "mode"];
+
   function _await$a(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
@@ -1789,7 +1791,7 @@
         cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
         _ref$mode = _ref.mode,
         mode = _ref$mode === void 0 ? "cors" : _ref$mode,
-        options = _objectWithoutProperties(_ref, ["cancellationToken", "mode"]);
+        options = _objectWithoutProperties(_ref, _excluded);
 
     var abortController = new AbortController();
     var cancelError;
@@ -1798,7 +1800,7 @@
       abortController.abort(reason);
     });
     var response;
-    return _continue$3(_catch$4(function () {
+    return _continue$3(_catch$5(function () {
       return _await$a(window.fetch(url, _objectSpread2({
         signal: abortController.signal,
         mode: mode
@@ -1836,7 +1838,7 @@
     });
   });
 
-  function _catch$4(body, recover) {
+  function _catch$5(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -2078,7 +2080,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _catch$3(body, recover) {
+  function _catch$4(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -2159,7 +2161,7 @@
         compileServerOrigin = _ref.compileServerOrigin,
         compileDirectoryRelativeUrl = _ref.compileDirectoryRelativeUrl;
     var moduleResponse;
-    return _continue$2(_catch$3(function () {
+    return _continue$2(_catch$4(function () {
       return _await$9(fetchSource(url, {
         importerUrl: importerUrl
       }), function (_fetchSource) {
@@ -3065,7 +3067,6 @@
         var lastScript = scripts[scripts.length - 1];
 
         if (lastScript) {
-          lastScript.src;
           lastAutoImportDeps = deps; // if this is already a System load, then the instantiate has already begun
           // so this re-import has no consequence
 
@@ -3595,7 +3596,7 @@
     };
   }
 
-  function _catch$2(body, recover) {
+  function _catch$3(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -3710,7 +3711,7 @@
               importResolver: importResolver
             }), function (browserSystem) {
               var importUsingSystemJs = _async$6(function () {
-                return _catch$2(function () {
+                return _catch$3(function () {
                   return _await$6(browserSystem.import(specifier), function (namespace) {
                     if (transferableNamespace) {
                       namespace = makeNamespaceTransferable(namespace);
@@ -3724,7 +3725,7 @@
                   });
                 }, function (error) {
                   var transformedError;
-                  return _continue$1(_catch$2(function () {
+                  return _continue$1(_catch$3(function () {
                     return _await$6(errorTransform(error), function (_errorTransform) {
                       transformedError = _errorTransform;
                     });
@@ -4267,7 +4268,7 @@
     };
   }
 
-  function _catch$1(body, recover) {
+  function _catch$2(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -4304,9 +4305,9 @@
         onFailure = _ref.onFailure;
     var urlToSourcemapConsumer = memoizeByFirstArgStringValue(_async$4(function (stackTraceFileUrl) {
       var _exit = false;
-      return stackTraceFileUrl.startsWith("node:") ? null : _catch$1(function () {
+      return stackTraceFileUrl.startsWith("node:") ? null : _catch$2(function () {
         var text;
-        return _continue(_catch$1(function () {
+        return _continue(_catch$2(function () {
           return _await$4(fetchFile(stackTraceFileUrl), function (fileResponse) {
             var status = fileResponse.status;
 
@@ -4352,7 +4353,7 @@
               sourcemapUrl = resolveFile(jsSourcemapUrl, stackTraceFileUrl, {
                 type: "source-map"
               });
-              return _catch$1(function () {
+              return _catch$2(function () {
                 return _await$4(fetchFile(sourcemapUrl), function (sourcemapResponse) {
                   var _exit3 = false;
                   var status = sourcemapResponse.status;
@@ -4415,7 +4416,7 @@
               var sourcemapSourceUrl = resolveFile(source, sourcemapUrl, {
                 type: "source"
               });
-              return _catch$1(function () {
+              return _catch$2(function () {
                 return _await$4(fetchFile(sourcemapSourceUrl), function (sourceResponse) {
                   var _exit4 = false;
                   var status = sourceResponse.status;
@@ -4503,7 +4504,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _catch(body, recover) {
+  function _catch$1(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -4640,7 +4641,7 @@
       var promise = errorRemappingCache.get(error);
       return _invoke$1(function () {
         if (promise) {
-          return _catch(function () {
+          return _catch$1(function () {
             return _await$3(promise, function (originalCallsites) {
               errorRemapFailureCallbackMap.get(error);
               var firstCall = originalCallsites[0];
@@ -4847,17 +4848,18 @@
 
   var navigationStartTime = getNavigationStartTime();
 
-  function _call(body, then, direct) {
-    if (direct) {
-      return then ? then(body()) : body();
+  function _catch(body, recover) {
+    try {
+      var result = body();
+    } catch (e) {
+      return recover(e);
     }
 
-    try {
-      var result = Promise.resolve(body());
-      return then ? result.then(then) : result;
-    } catch (e) {
-      return Promise.reject(e);
+    if (result && result.then) {
+      return result.then(void 0, recover);
     }
+
+    return result;
   }
 
   var readyPromise = new Promise(function (resolve) {
@@ -4873,6 +4875,21 @@
     }
   });
 
+  function _call(body, then, direct) {
+    if (direct) {
+      return then ? then(body()) : body();
+    }
+
+    try {
+      var result = Promise.resolve(body());
+      return then ? result.then(then) : result;
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  var fileExecutionMap = {};
+
   function _invoke(body, then) {
     var result = body();
 
@@ -4883,7 +4900,6 @@
     return then(result);
   }
 
-  var fileExecutionMap = {};
   var executionResultPromise = readyPromise.then(_async(function () {
     var fileExecutionResultMap = {};
     var fileExecutionResultPromises = [];
@@ -4911,18 +4927,47 @@
       } : {}), {}, {
         startTime: navigationStartTime,
         endTime: Date.now(),
-        fileExecutionResultMap: fileExecutionResultMap,
-        performance: readPerformance()
+        fileExecutionResultMap: fileExecutionResultMap
       });
     });
   }));
 
-  var importFile = function importFile(specifier) {
+  var executeFileUsingDynamicImport = _async(function (specifier) {
+    var _document = document,
+        currentScript = _document.currentScript;
+
+    var fileExecutionResultPromise = _async(function () {
+      return _catch(function () {
+        var url = new URL(specifier, document.location.href).href;
+        return _await(import(url), function (namespace) {
+          var executionResult = {
+            status: "completed",
+            namespace: namespace
+          };
+          return executionResult;
+        });
+      }, function (e) {
+        var executionResult = {
+          status: "errored",
+          exceptionSource: unevalException(e)
+        };
+        onExecutionError(executionResult, {
+          currentScript: currentScript
+        });
+        return executionResult;
+      });
+    })();
+
+    fileExecutionMap[specifier] = fileExecutionResultPromise;
+    return fileExecutionResultPromise;
+  });
+
+  var executeFileUsingSystemJs = function executeFileUsingSystemJs(specifier) {
     // si on a déja importer ce fichier ??
     // if (specifier in fileExecutionMap) {
     // }
-    var _document = document,
-        currentScript = _document.currentScript;
+    var _document2 = document,
+        currentScript = _document2.currentScript;
 
     var fileExecutionResultPromise = function () {
       return _call(getBrowserRuntime, function (browserRuntime) {
@@ -4977,11 +5022,7 @@
 
   var getBrowserRuntime = memoize(_async(function () {
     var compileServerOrigin = document.location.origin;
-    return _await(fetchUrl("".concat(compileServerOrigin, "/.jsenv/compile-meta.json"), {
-      headers: {
-        "x-jsenv": true
-      }
-    }), function (compileMetaResponse) {
+    return _await(fetchUrl("".concat(compileServerOrigin, "/.jsenv/compile-meta.json")), function (compileMetaResponse) {
       return _await(compileMetaResponse.json(), function (compileMeta) {
         var outDirectoryRelativeUrl = compileMeta.outDirectoryRelativeUrl,
             errorStackRemapping = compileMeta.errorStackRemapping;
@@ -5036,34 +5077,12 @@
       });
     });
   }));
-
-  var readPerformance = function readPerformance() {
-    if (!window.performance) {
-      return null;
-    }
-
-    return {
-      timeOrigin: window.performance.timeOrigin,
-      timing: window.performance.timing.toJSON(),
-      navigation: window.performance.navigation.toJSON(),
-      measures: readPerformanceMeasures()
-    };
-  };
-
-  var readPerformanceMeasures = function readPerformanceMeasures() {
-    var measures = {};
-    var measurePerfEntries = window.performance.getEntriesByType("measure");
-    measurePerfEntries.forEach(function (measurePerfEntry) {
-      measures[measurePerfEntry.name] = measurePerfEntry.duration;
-    });
-    return measures;
-  };
-
   window.__jsenv__ = {
     executionResultPromise: executionResultPromise,
-    importFile: importFile
+    executeFileUsingDynamicImport: executeFileUsingDynamicImport,
+    executeFileUsingSystemJs: executeFileUsingSystemJs
   };
 
 }());
 
-//# sourceMappingURL=jsenv-browser-system.js.map
+//# sourceMappingURL=jsenv_browser_system.js.map

@@ -9,14 +9,13 @@ import {
 } from "./internal/compiling/startCompileServer.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 import {
-  sourcemapMainFileUrl,
-  sourcemapMappingFileUrl,
-  jsenvExploringRedirectorHtmlUrl,
-  jsenvExploringRedirectorJsBuildUrl,
-  jsenvExploringIndexHtmlUrl,
-  jsenvExploringIndexJsBuildUrl,
-  jsenvToolbarInjectorBuildUrl,
-  jsenvToolbarJsBuildUrl,
+  sourcemapMainFileInfo,
+  sourcemapMappingFileInfo,
+  jsenvExploringRedirectorHtmlFileInfo,
+  jsenvExploringRedirectorJsFileInfo,
+  jsenvExploringIndexHtmlFileInfo,
+  jsenvExploringIndexJsFileInfo,
+  jsenvToolbarJsFileInfo,
 } from "./internal/jsenvInternalFiles.js"
 
 export const startExploring = async ({
@@ -25,8 +24,9 @@ export const startExploring = async ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   outDirectoryName,
-  toolbar = true,
+  jsenvToolbar = true,
   livereloading = true,
+  inlineImportMapIntoHTML = true,
   ...rest
 }) => {
   return executeJsenvAsyncFunction(async () => {
@@ -38,10 +38,6 @@ export const startExploring = async ({
       jsenvDirectoryRelativeUrl,
       outDirectoryName,
     })
-    const jsenvToolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
-      jsenvToolbarInjectorBuildUrl,
-      projectDirectoryUrl,
-    )
 
     const redirectFiles = createRedirectFilesService({
       projectDirectoryUrl,
@@ -51,6 +47,7 @@ export const startExploring = async ({
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
       explorableConfig,
+      livereloading,
     })
     const serveExplorableListAsJson = createExplorableListAsJsonService({
       projectDirectoryUrl,
@@ -71,15 +68,7 @@ export const startExploring = async ({
       stopOnPackageVersionChange: true,
       watchAndSyncImportMap: true,
       compileGroupCount: 2,
-      scriptInjections: [
-        ...(toolbar
-          ? [
-              {
-                src: `/${jsenvToolbarInjectorBuildRelativeUrlForProject}`,
-              },
-            ]
-          : []),
-      ],
+      jsenvToolbarInjection: jsenvToolbar,
       customServices: {
         "service:exploring-redirect": (request) => redirectFiles(request),
         "service:exploring-data": (request) => serveExploringData(request),
@@ -87,6 +76,7 @@ export const startExploring = async ({
       },
       jsenvDirectoryRelativeUrl,
       outDirectoryName,
+      inlineImportMapIntoHTML,
       ...rest,
     })
 
@@ -96,19 +86,19 @@ export const startExploring = async ({
 
 const createRedirectFilesService = ({ projectDirectoryUrl }) => {
   const jsenvExploringRedirectorHtmlRelativeUrlForProject = urlToRelativeUrl(
-    jsenvExploringRedirectorHtmlUrl,
+    jsenvExploringRedirectorHtmlFileInfo.url,
     projectDirectoryUrl,
   )
   const jsenvExploringRedirectorJsBuildRelativeUrlForProject = urlToRelativeUrl(
-    jsenvExploringRedirectorJsBuildUrl,
+    jsenvExploringRedirectorJsFileInfo.jsenvBuildUrl,
     projectDirectoryUrl,
   )
   const jsenvExploringJsBuildRelativeUrlForProject = urlToRelativeUrl(
-    jsenvExploringIndexJsBuildUrl,
+    jsenvExploringIndexJsFileInfo.jsenvBuildUrl,
     projectDirectoryUrl,
   )
   const jsenvToolbarJsBuildRelativeUrlForProject = urlToRelativeUrl(
-    jsenvToolbarJsBuildUrl,
+    jsenvToolbarJsFileInfo.jsenvBuildUrl,
     projectDirectoryUrl,
   )
 
@@ -159,7 +149,7 @@ const createRedirectFilesService = ({ projectDirectoryUrl }) => {
     // "/.jsenv/jsenv-toolbar.js.map"
     // we could also inline sourcemap but it's not yet possible
     // inside buildProject
-    if (request.ressource === "/.jsenv/jsenv-toolbar.js.map") {
+    if (request.ressource === `/.jsenv/${jsenvToolbarJsFileInfo.sourcemapFilename}`) {
       const jsenvToolbarJsBuildSourcemapServerUrl = `${request.origin}/${jsenvToolbarJsBuildRelativeUrlForProject}.map`
       return {
         status: 307,
@@ -177,27 +167,28 @@ const createExploringDataService = ({
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   explorableConfig,
+  livereloading,
 }) => {
   return (request) => {
-    if (
-      request.ressource === "/.jsenv/exploring.json" &&
-      request.method === "GET" &&
-      "x-jsenv" in request.headers
-    ) {
+    if (request.ressource === "/.jsenv/exploring.json" && request.method === "GET") {
       const data = {
         projectDirectoryUrl,
         outDirectoryRelativeUrl,
         jsenvDirectoryRelativeUrl: urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl),
         exploringHtmlFileRelativeUrl: urlToRelativeUrl(
-          jsenvExploringIndexHtmlUrl,
+          jsenvExploringIndexHtmlFileInfo.url,
           projectDirectoryUrl,
         ),
-        sourcemapMainFileRelativeUrl: urlToRelativeUrl(sourcemapMainFileUrl, jsenvCoreDirectoryUrl),
+        sourcemapMainFileRelativeUrl: urlToRelativeUrl(
+          sourcemapMainFileInfo.url,
+          jsenvCoreDirectoryUrl,
+        ),
         sourcemapMappingFileRelativeUrl: urlToRelativeUrl(
-          sourcemapMappingFileUrl,
+          sourcemapMappingFileInfo.url,
           jsenvCoreDirectoryUrl,
         ),
         explorableConfig,
+        livereloading,
       }
       const json = JSON.stringify(data)
       return {
@@ -220,11 +211,7 @@ const createExplorableListAsJsonService = ({
   explorableConfig,
 }) => {
   return async (request) => {
-    if (
-      request.ressource === "/.jsenv/explorables.json" &&
-      request.method === "GET" &&
-      "x-jsenv" in request.headers
-    ) {
+    if (request.ressource === "/.jsenv/explorables.json" && request.method === "GET") {
       const structuredMetaMapRelativeForExplorable = {}
       Object.keys(explorableConfig).forEach((explorableGroup) => {
         const explorableGroupConfig = explorableConfig[explorableGroup]

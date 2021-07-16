@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/vue",
-  "version": "1.0.3-alpha",
+  "version": "1.0.4-alpha",
   "description": "Enable vue in jsenv.",
   "license": "MIT",
   "repository": {

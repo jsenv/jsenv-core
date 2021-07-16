@@ -1,9 +1,10 @@
 import { uneval } from "@jsenv/uneval"
-import { jsenvNodeSystemUrl } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+
+import { jsenvNodeSystemFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 
 const ACTIONS_AVAILABLE = {
   "execute-using-dynamic-import-fallback-on-systemjs": async (executeParams) => {
-    const { execute } = await import(jsenvNodeSystemUrl)
+    const { execute } = await import(jsenvNodeSystemFileInfo.url)
 
     return execute(executeParams)
   },

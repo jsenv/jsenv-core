@@ -1,9 +1,9 @@
 import { resolveBrowserGroup } from "../runtime/resolveBrowserGroup.js"
 import { computeCompileIdFromGroupId } from "../runtime/computeCompileIdFromGroupId.js"
 import { fetchUrl } from "../toolbar/util/fetching.js"
-import { fetchExploringJson } from "./fetchExploringJson.js"
 import { createPreference } from "../toolbar/util/preferences.js"
 import { startJavaScriptAnimation } from "../toolbar/util/animation.js"
+import { fetchExploringJson } from "./fetchExploringJson.js"
 
 const fetchJSON = async (url, options) => {
   const response = await fetchUrl(url, options)
@@ -19,9 +19,6 @@ const run = async () => {
 
   const files = await fetchJSON(`/.jsenv/explorables.json`, {
     method: "GET",
-    headers: {
-      "x-jsenv": "1",
-    },
   })
 
   const compileServerOrigin = document.location.origin

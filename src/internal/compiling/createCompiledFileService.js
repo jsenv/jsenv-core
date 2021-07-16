@@ -1,5 +1,6 @@
 import { serveFile } from "@jsenv/server"
-import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, resolveDirectoryUrl } from "@jsenv/util"
+
 import { urlToCompileInfo } from "@jsenv/core/src/internal/url-conversion.js"
 import {
   COMPILE_ID_BUILD_GLOBAL,
@@ -7,19 +8,18 @@ import {
   COMPILE_ID_BUILD_COMMONJS,
   COMPILE_ID_BUILD_COMMONJS_FILES,
 } from "../CONSTANTS.js"
-import { jsenvBrowserSystemBuildUrl } from "../jsenvInternalFiles.js"
 import { compileFile } from "./compileFile.js"
 import { jsenvCompilerForDynamicBuild } from "./jsenvCompilerForDynamicBuild.js"
 import { jsenvCompilerForHtml } from "./jsenvCompilerForHtml.js"
 import { jsenvCompilerForImportmap } from "./jsenvCompilerForImportmap.js"
 import { jsenvCompilerForJavaScript } from "./jsenvCompilerForJavaScript.js"
 
-const jsenvCompilerCandidates = [
-  jsenvCompilerForDynamicBuild,
-  jsenvCompilerForJavaScript,
-  jsenvCompilerForHtml,
-  jsenvCompilerForImportmap,
-]
+const jsenvCompilers = {
+  ...jsenvCompilerForDynamicBuild,
+  ...jsenvCompilerForJavaScript,
+  ...jsenvCompilerForHtml,
+  ...jsenvCompilerForImportmap,
+}
 
 export const createCompiledFileService = ({
   cancellationToken,
@@ -35,7 +35,7 @@ export const createCompiledFileService = ({
   groupMap,
   convertMap,
   customCompilers,
-  scriptInjections,
+  jsenvToolbarInjection,
 
   projectFileRequestedCallback,
   useFilesystemAsCache,
@@ -43,11 +43,6 @@ export const createCompiledFileService = ({
   compileCacheStrategy,
   sourcemapExcludeSources,
 }) => {
-  const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
-    jsenvBrowserSystemBuildUrl,
-    projectDirectoryUrl,
-  )
-
   return (request) => {
     const { origin, ressource } = request
     const requestUrl = `${origin}${ressource}`
@@ -124,12 +119,11 @@ export const createCompiledFileService = ({
       writeOnFilesystem,
       sourcemapExcludeSources,
 
-      jsenvBrowserBuildUrlRelativeToProject,
-      scriptInjections,
+      jsenvToolbarInjection,
     }
-    const compilerCandidates = [...jsenvCompilerCandidates, ...customCompilers]
-    compilerCandidates.find((compilerCandidate) => {
-      const returnValue = compilerCandidate(compilerCandidateParams)
+    const compilerCandidates = { ...jsenvCompilers, ...customCompilers }
+    Object.keys(compilerCandidates).find((compilerCandidateName) => {
+      const returnValue = compilerCandidates[compilerCandidateName](compilerCandidateParams)
       if (returnValue && typeof returnValue === "object") {
         compilerOptions = returnValue
         return true

@@ -1,6 +1,150 @@
 (function () {
   'use strict';
 
+  // eslint-disable-next-line consistent-return
+  var arrayWithHoles = (function (arr) {
+    if (Array.isArray(arr)) return arr;
+  });
+
+  function _iterableToArrayLimit(arr, i) {
+    // this is an expanded form of \`for...of\` that properly supports abrupt completions of
+    // iterators etc. variable names have been minimised to reduce the size of this massive
+    // helper. sometimes spec compliance is annoying :(
+    //
+    // _n = _iteratorNormalCompletion
+    // _d = _didIteratorError
+    // _e = _iteratorError
+    // _i = _iterator
+    // _s = _step
+    var _i = arr == null ? null : typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"];
+
+    if (_i == null) return;
+    var _arr = [];
+    var _n = true;
+    var _d = false;
+
+    var _s, _e;
+
+    try {
+      for (_i = _i.call(arr); !(_n = (_s = _i.next()).done); _n = true) {
+        _arr.push(_s.value);
+
+        if (i && _arr.length === i) break;
+      }
+    } catch (err) {
+      _d = true;
+      _e = err;
+    } finally {
+      try {
+        if (!_n && _i["return"] != null) _i["return"]();
+      } finally {
+        if (_d) throw _e;
+      }
+    }
+
+    return _arr;
+  }
+
+  /* eslint-disable no-eq-null, eqeqeq */
+  function arrayLikeToArray(arr, len) {
+    if (len == null || len > arr.length) len = arr.length;
+    var arr2 = new Array(len);
+
+    for (var i = 0; i < len; i++) {
+      arr2[i] = arr[i];
+    }
+
+    return arr2;
+  }
+
+  /* eslint-disable consistent-return */
+  function unsupportedIterableToArray(o, minLen) {
+    if (!o) return;
+    if (typeof o === "string") return arrayLikeToArray(o, minLen);
+    var n = Object.prototype.toString.call(o).slice(8, -1);
+    if (n === "Object" && o.constructor) n = o.constructor.name;
+    if (n === "Map" || n === "Set") return Array.from(o);
+    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
+  }
+
+  var nonIterableRest = (function () {
+    throw new TypeError("Invalid attempt to destructure non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  });
+
+  var _slicedToArray = (function (arr, i) {
+    return arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || unsupportedIterableToArray(arr, i) || nonIterableRest();
+  });
+
+  var _defineProperty = (function (obj, key, value) {
+    // Shortcircuit the slow defineProperty path when possible.
+    // We are trying to avoid issues where setters defined on the
+    // prototype cause side effects under the fast path of simple
+    // assignment. By checking for existence of the property with
+    // the in operator, we can optimize most of this overhead away.
+    if (key in obj) {
+      Object.defineProperty(obj, key, {
+        value: value,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    } else {
+      obj[key] = value;
+    }
+
+    return obj;
+  });
+
+  var createDetailedMessage = function createDetailedMessage(message) {
+    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var string = "".concat(message);
+    Object.keys(details).forEach(function (key) {
+      var value = details[key];
+      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
+    });
+    return string;
+  };
+
+  var COMPILE_ID_OTHERWISE = "otherwise";
+
+  var computeCompileIdFromGroupId = function computeCompileIdFromGroupId(_ref) {
+    var groupId = _ref.groupId,
+        groupMap = _ref.groupMap;
+
+    if (typeof groupId === "undefined") {
+      if (COMPILE_ID_OTHERWISE in groupMap) {
+        return COMPILE_ID_OTHERWISE;
+      }
+
+      var keys = Object.keys(groupMap);
+
+      if (keys.length === 1) {
+        return keys[0];
+      }
+
+      throw new Error(createUnexpectedGroupIdMessage({
+        groupMap: groupMap
+      }));
+    }
+
+    if (groupId in groupMap === false) {
+      throw new Error(createUnexpectedGroupIdMessage({
+        groupId: groupId,
+        groupMap: groupMap
+      }));
+    }
+
+    return groupId;
+  };
+
+  var createUnexpectedGroupIdMessage = function createUnexpectedGroupIdMessage(_ref2) {
+    var _createDetailedMessag;
+
+    var compileId = _ref2.compileId,
+        groupMap = _ref2.groupMap;
+    return createDetailedMessage("unexpected groupId.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "expected compiled id", Object.keys(groupMap)), _defineProperty(_createDetailedMessag, "received compile id", compileId), _createDetailedMessag));
+  };
+
   var firstMatch = function firstMatch(regexp, string) {
     var match = string.match(regexp);
     return match && match.length > 0 ? match[1] || undefined : undefined;
@@ -349,76 +493,6 @@
     return resolveGroup(detectBrowser(), groupMap);
   };
 
-  var _defineProperty = (function (obj, key, value) {
-    // Shortcircuit the slow defineProperty path when possible.
-    // We are trying to avoid issues where setters defined on the
-    // prototype cause side effects under the fast path of simple
-    // assignment. By checking for existence of the property with
-    // the in operator, we can optimize most of this overhead away.
-    if (key in obj) {
-      Object.defineProperty(obj, key, {
-        value: value,
-        enumerable: true,
-        configurable: true,
-        writable: true
-      });
-    } else {
-      obj[key] = value;
-    }
-
-    return obj;
-  });
-
-  var createDetailedMessage = function createDetailedMessage(message) {
-    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    var string = "".concat(message);
-    Object.keys(details).forEach(function (key) {
-      var value = details[key];
-      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
-    });
-    return string;
-  };
-
-  var COMPILE_ID_OTHERWISE = "otherwise";
-
-  var computeCompileIdFromGroupId = function computeCompileIdFromGroupId(_ref) {
-    var groupId = _ref.groupId,
-        groupMap = _ref.groupMap;
-
-    if (typeof groupId === "undefined") {
-      if (COMPILE_ID_OTHERWISE in groupMap) {
-        return COMPILE_ID_OTHERWISE;
-      }
-
-      var keys = Object.keys(groupMap);
-
-      if (keys.length === 1) {
-        return keys[0];
-      }
-
-      throw new Error(createUnexpectedGroupIdMessage({
-        groupMap: groupMap
-      }));
-    }
-
-    if (groupId in groupMap === false) {
-      throw new Error(createUnexpectedGroupIdMessage({
-        groupId: groupId,
-        groupMap: groupMap
-      }));
-    }
-
-    return groupId;
-  };
-
-  var createUnexpectedGroupIdMessage = function createUnexpectedGroupIdMessage(_ref2) {
-    var _createDetailedMessag;
-
-    var compileId = _ref2.compileId,
-        groupMap = _ref2.groupMap;
-    return createDetailedMessage("unexpected groupId.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "expected compiled id", Object.keys(groupMap)), _defineProperty(_createDetailedMessag, "received compile id", compileId), _createDetailedMessag));
-  };
-
   function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
 
@@ -530,142 +604,10 @@
     return value && _typeof(value) === "object" && value.name === "CANCEL_ERROR";
   };
 
-  var memoize = function memoize(compute) {
-    var memoized = false;
-    var memoizedValue;
-
-    var fnWithMemoization = function fnWithMemoization() {
-      if (memoized) {
-        return memoizedValue;
-      } // if compute is recursive wait for it to be fully done before storing the lockValue
-      // so set locked later
-
-
-      memoizedValue = compute.apply(void 0, arguments);
-      memoized = true;
-      return memoizedValue;
-    };
-
-    fnWithMemoization.forget = function () {
-      var value = memoizedValue;
-      memoized = false;
-      memoizedValue = undefined;
-      return value;
-    };
-
-    return fnWithMemoization;
-  };
-
-  function _await$4(value, then, direct) {
-    if (direct) {
-      return then ? then(value) : value;
-    }
-
-    if (!value || !value.then) {
-      value = Promise.resolve(value);
-    }
-
-    return then ? value.then(then) : value;
-  }
-
-  var fetchNative$1 = _async$4(function (url) {
-
-    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-
-    var _ref$cancellationToke = _ref.cancellationToken,
-        cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
-        options = _objectWithoutProperties(_ref, ["cancellationToken"]);
-
-    var abortController = new AbortController();
-    var cancelError;
-    cancellationToken.register(function (reason) {
-      cancelError = reason;
-      abortController.abort(reason);
-    });
-    var response;
-    return _continue$1(_catch$2(function () {
-      return _await$4(window.fetch(url, _objectSpread2({
-        signal: abortController.signal
-      }, options)), function (_window$fetch) {
-        response = _window$fetch;
-      });
-    }, function (e) {
-      if (cancelError && e.name === "AbortError") {
-        throw cancelError;
-      }
-
-      throw e;
-    }), function (_result) {
-      return response;
-    });
-  });
-
-  function _catch$2(body, recover) {
-    try {
-      var result = body();
-    } catch (e) {
-      return recover(e);
-    }
-
-    if (result && result.then) {
-      return result.then(void 0, recover);
-    }
-
-    return result;
-  }
-
-  var fetchPolyfill = function fetchPolyfill() {
-    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-      args[_key] = arguments[_key];
-    }
-
-    return _call$2(loadPolyfill, function (_ref2) {
-      var fetchUsingXHR = _ref2.fetchUsingXHR;
-      return fetchUsingXHR.apply(void 0, args);
-    });
-  };
-
-  function _continue$1(value, then) {
-    return value && value.then ? value.then(then) : then(value);
-  }
-
-  var loadPolyfill = memoize(function () {
-    return Promise.resolve().then(function () { return fetchUsingXHR$1; });
-  });
-
-  function _async$4(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
-
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
-
-  function _call$2(body, then, direct) {
-    if (direct) {
-      return then ? then(body()) : body();
-    }
-
-    try {
-      var result = Promise.resolve(body());
-      return then ? result.then(then) : result;
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  }
-
-  var fetchUrl$1 = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative$1 : fetchPolyfill;
-
   // fallback to this polyfill (or even use an existing polyfill would be better)
   // https://github.com/github/fetch/blob/master/fetch.js
 
-  function _await$3(value, then, direct) {
+  function _await$5(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -677,7 +619,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _async$3(f) {
+  function _async$5(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -704,7 +646,7 @@
     }
   }
 
-  var fetchUsingXHR = _async$3(function (url) {
+  var fetchUsingXHR = _async$5(function (url) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
         _ref$cancellationToke = _ref.cancellationToken,
         cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
@@ -787,7 +729,7 @@
     }
 
     xhr.send(body);
-    return _await$3(headersPromise, function () {
+    return _await$5(headersPromise, function () {
       // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
       var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
       var responseStatus = xhr.status;
@@ -795,7 +737,7 @@
       var responseHeaders = getHeadersFromXHR(xhr);
 
       var readBody = function readBody() {
-        return _await$3(bodyPromise, function () {
+        return _await$5(bodyPromise, function () {
           var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
           if (status === 0) {
@@ -831,7 +773,7 @@
         return _call$1(text, JSON.parse);
       };
 
-      var blob = _async$3(function () {
+      var blob = _async$5(function () {
         if (!hasBlob) {
           throw new Error("blob not supported");
         }
@@ -868,7 +810,7 @@
         });
       };
 
-      var formData = _async$3(function () {
+      var formData = _async$5(function () {
         if (!hasFormData) {
           throw new Error("formData not supported");
         }
@@ -1049,7 +991,7 @@
     return form;
   };
 
-  var blobToArrayBuffer = _async$3(function (blob) {
+  var blobToArrayBuffer = _async$5(function (blob) {
     var reader = new FileReader();
     var promise = fileReaderReady(reader);
     reader.readAsArrayBuffer(blob);
@@ -1098,12 +1040,9 @@
     return view.buffer;
   };
 
-  var fetchUsingXHR$1 = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    fetchUsingXHR: fetchUsingXHR
-  });
+  var _excluded = ["cancellationToken", "mode"];
 
-  function _await$2(value, then, direct) {
+  function _await$4(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -1115,7 +1054,7 @@
     return then ? value.then(then) : value;
   }
 
-  var fetchNative = _async$2(function (url) {
+  var fetchNative = _async$4(function (url) {
 
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
@@ -1123,7 +1062,7 @@
         cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
         _ref$mode = _ref.mode,
         mode = _ref$mode === void 0 ? "cors" : _ref$mode,
-        options = _objectWithoutProperties(_ref, ["cancellationToken", "mode"]);
+        options = _objectWithoutProperties(_ref, _excluded);
 
     var abortController = new AbortController();
     var cancelError;
@@ -1132,8 +1071,8 @@
       abortController.abort(reason);
     });
     var response;
-    return _continue(_catch$1(function () {
-      return _await$2(window.fetch(url, _objectSpread2({
+    return _continue(_catch$2(function () {
+      return _await$4(window.fetch(url, _objectSpread2({
         signal: abortController.signal,
         mode: mode
       }, options)), function (_window$fetch) {
@@ -1170,7 +1109,7 @@
     });
   });
 
-  function _catch$1(body, recover) {
+  function _catch$2(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -1196,7 +1135,7 @@
     return value && value.then ? value.then(then) : then(value);
   }
 
-  function _async$2(f) {
+  function _async$4(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -1211,6 +1150,241 @@
   }
 
   var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
+
+  function _await$3(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  function _async$3(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
+  var fetchJson = _async$3(function (url) {
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    return _await$3(fetchUrl(url, options), function (response) {
+      return _await$3(response.json());
+    });
+  });
+
+  function _await$2(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  function _async$2(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
+  function _call(body, then, direct) {
+    if (direct) {
+      return then ? then(body()) : body();
+    }
+
+    try {
+      var result = Promise.resolve(body());
+      return then ? result.then(then) : result;
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  function _catch$1(body, recover) {
+    try {
+      var result = body();
+    } catch (e) {
+      return recover(e);
+    }
+
+    if (result && result.then) {
+      return result.then(void 0, recover);
+    }
+
+    return result;
+  }
+
+  var scanBrowserRuntimeFeatures = _async$2(function () {
+    return _await$2(fetchJson("/.jsenv/compile-meta.json"), function (_ref) {
+      var outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
+      var groupMapUrl = "/".concat(outDirectoryRelativeUrl, "groupMap.json");
+      var envFileUrl = "/".concat(outDirectoryRelativeUrl, "env.json");
+      return _await$2(Promise.all([fetchJson(groupMapUrl), fetchJson(envFileUrl)]), function (_ref2) {
+        var _ref3 = _slicedToArray(_ref2, 2),
+            groupMap = _ref3[0],
+            envJson = _ref3[1];
+
+        var compileId = computeCompileIdFromGroupId({
+          groupId: resolveBrowserGroup(groupMap),
+          groupMap: groupMap
+        });
+        var groupInfo = groupMap[compileId];
+        var inlineImportMapIntoHTML = envJson.inlineImportMapIntoHTML;
+        return _await$2(getFeaturesReport({
+          groupInfo: groupInfo,
+          inlineImportMapIntoHTML: inlineImportMapIntoHTML
+        }), function (featuresReport) {
+          var canAvoidCompilation = featuresReport.babelPluginRequiredNames.length === 0 && featuresReport.jsenvPluginRequiredNames.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
+          return {
+            featuresReport: featuresReport,
+            canAvoidCompilation: canAvoidCompilation,
+            outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+            compileId: compileId
+          };
+        });
+      });
+    });
+  });
+
+  var getFeaturesReport = _async$2(function (_ref4) {
+    var groupInfo = _ref4.groupInfo,
+        inlineImportMapIntoHTML = _ref4.inlineImportMapIntoHTML;
+    var babelPluginRequiredNames = babelPluginRequiredNamesFromGroupInfo(groupInfo);
+    var jsenvPluginRequiredNames = groupInfo.jsenvPluginRequiredNameArray; // start testing importmap support first and not in paralell
+    // so that there is not module script loaded beore importmap is injected
+    // it would log an error in chrome console and return undefined
+
+    return _await$2(supportsImportmap({
+      //  chrome supports inline but not remote importmap
+      // https://github.com/WICG/import-maps/issues/235
+      // at this stage we won't know if the html file will use
+      // an importmap or not and if that importmap is inline or specified with an src
+      // so we should test if browser support local and remote importmap.
+      // But there exploring server can inline importmap by transforming html
+      // and in that case we can test only the local importmap support
+      // so we test importmap support and the remote one
+      remote: !inlineImportMapIntoHTML
+    }), function (importmapSupported) {
+      return _call(supportsDynamicImport, function (dynamicImportSupported) {
+        return _call(supportsTopLevelAwait, function (topLevelAwaitSupported) {
+          return {
+            babelPluginRequiredNames: babelPluginRequiredNames,
+            jsenvPluginRequiredNames: jsenvPluginRequiredNames,
+            importmapSupported: importmapSupported,
+            dynamicImportSupported: dynamicImportSupported,
+            topLevelAwaitSupported: topLevelAwaitSupported
+          };
+        });
+      });
+    });
+  });
+
+  var babelPluginRequiredNamesFromGroupInfo = function babelPluginRequiredNamesFromGroupInfo(groupInfo) {
+    var babelPluginRequiredNameArray = groupInfo.babelPluginRequiredNameArray;
+    var babelPluginRequiredNames = babelPluginRequiredNameArray.slice(); // When instrumentation CAN be handed by playwright
+    // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
+    // "transform-instrument" becomes non mandatory
+    // TODO: set window.PLAYWRIGHT_COVERAGE to true in specific circustances
+
+    var transformInstrumentIndex = babelPluginRequiredNames.indexOf("transform-instrument");
+
+    if (transformInstrumentIndex > -1 && window.PLAYWRIGHT_COVERAGE) {
+      babelPluginRequiredNames.splice(transformInstrumentIndex, 1);
+    }
+
+    return babelPluginRequiredNames;
+  };
+
+  var supportsImportmap = _async$2(function () {
+    var _ref5 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref5$remote = _ref5.remote,
+        remote = _ref5$remote === void 0 ? true : _ref5$remote;
+
+    var specifier = jsToTextUrl("export default false");
+    var importMap = {
+      imports: _defineProperty({}, specifier, jsToTextUrl("export default true"))
+    };
+    var importmapScript = document.createElement("script");
+    var importmapString = JSON.stringify(importMap, null, "  ");
+    importmapScript.type = "importmap";
+
+    if (remote) {
+      importmapScript.src = "data:application/json;base64,".concat(window.btoa(importmapString));
+    } else {
+      importmapScript.textContent = importmapString;
+    }
+
+    document.body.appendChild(importmapScript);
+    var scriptModule = document.createElement("script");
+    scriptModule.type = "module";
+    scriptModule.src = jsToTextUrl("import supported from \"".concat(specifier, "\"; window.__importmap_supported = supported"));
+    return new Promise(function (resolve, reject) {
+      scriptModule.onload = function () {
+        var supported = window.__importmap_supported;
+        delete window.__importmap_supported;
+        document.body.removeChild(scriptModule);
+        document.body.removeChild(importmapScript);
+        resolve(supported);
+      };
+
+      scriptModule.onerror = function () {
+        document.body.removeChild(scriptModule);
+        document.body.removeChild(importmapScript);
+        reject();
+      };
+
+      document.body.appendChild(scriptModule);
+    });
+  });
+
+  var jsToTextUrl = function jsToTextUrl(js) {
+    return "data:text/javascript;base64,".concat(window.btoa(js));
+  };
+
+  var supportsDynamicImport = _async$2(function () {
+    var moduleSource = jsToTextUrl("export default 42");
+    return _catch$1(function () {
+      return _await$2(import(moduleSource), function (namespace) {
+        return namespace.default === 42;
+      });
+    }, function () {
+      return false;
+    });
+  });
+
+  var supportsTopLevelAwait = _async$2(function () {
+    var moduleSource = jsToTextUrl("export default await Promise.resolve(42)");
+    return _catch$1(function () {
+      return _await$2(import(moduleSource), function (namespace) {
+        return namespace.default === 42;
+      });
+    }, function () {
+      return false;
+    });
+  });
 
   function _await$1(value, then, direct) {
     if (direct) {
@@ -1257,14 +1431,9 @@
         cancellationToken = _ref.cancellationToken;
 
     return _catch(function () {
-      return _await$1(fetchUrl("/.jsenv/exploring.json", {
-        headers: {
-          "x-jsenv": "1"
-        },
+      return _await$1(fetchJson("/.jsenv/exploring.json", {
         cancellationToken: cancellationToken
-      }), function (exploringJsonResponse) {
-        return _await$1(exploringJsonResponse.json());
-      });
+      }));
     }, function (e) {
       if (isCancelError(e)) {
         throw e;
@@ -1273,85 +1442,6 @@
       throw new Error(createDetailedMessage("Cannot communicate with exploring server due to a network error", _defineProperty({}, "error stack", e.stack)));
     });
   });
-
-  var createPreference = function createPreference(name) {
-    return {
-      has: function has() {
-        return localStorage.hasOwnProperty(name);
-      },
-      get: function get() {
-        return localStorage.hasOwnProperty(name) ? JSON.parse(localStorage.getItem(name)) : undefined;
-      },
-      set: function set(value) {
-        return localStorage.setItem(name, JSON.stringify(value));
-      }
-    };
-  };
-
-  var startJavaScriptAnimation = function startJavaScriptAnimation(_ref6) {
-    var _ref6$duration = _ref6.duration,
-        duration = _ref6$duration === void 0 ? 300 : _ref6$duration,
-        _ref6$timingFunction = _ref6.timingFunction,
-        timingFunction = _ref6$timingFunction === void 0 ? function (t) {
-      return t;
-    } : _ref6$timingFunction,
-        _ref6$onProgress = _ref6.onProgress,
-        onProgress = _ref6$onProgress === void 0 ? function () {} : _ref6$onProgress,
-        _ref6$onCancel = _ref6.onCancel,
-        onCancel = _ref6$onCancel === void 0 ? function () {} : _ref6$onCancel,
-        _ref6$onComplete = _ref6.onComplete,
-        onComplete = _ref6$onComplete === void 0 ? function () {} : _ref6$onComplete;
-
-    if (isNaN(duration)) {
-      // console.warn(`duration must be a number, received ${duration}`)
-      return function () {};
-    }
-
-    duration = parseInt(duration, 10);
-    var startMs = performance.now();
-    var currentRequestAnimationFrameId;
-    var done = false;
-    var rawProgress = 0;
-    var progress = 0;
-
-    var handler = function handler() {
-      currentRequestAnimationFrameId = null;
-      var nowMs = performance.now();
-      rawProgress = Math.min((nowMs - startMs) / duration, 1);
-      progress = timingFunction(rawProgress);
-      done = rawProgress === 1;
-      onProgress({
-        done: done,
-        rawProgress: rawProgress,
-        progress: progress
-      });
-
-      if (done) {
-        onComplete();
-      } else {
-        currentRequestAnimationFrameId = window.requestAnimationFrame(handler);
-      }
-    };
-
-    handler();
-
-    var stop = function stop() {
-      if (currentRequestAnimationFrameId) {
-        window.cancelAnimationFrame(currentRequestAnimationFrameId);
-        currentRequestAnimationFrameId = null;
-      }
-
-      if (!done) {
-        done = true;
-        onCancel({
-          rawProgress: rawProgress,
-          progress: progress
-        });
-      }
-    };
-
-    return stop;
-  };
 
   function _await(value, then, direct) {
     if (direct) {
@@ -1365,9 +1455,20 @@
     return then ? value.then(then) : value;
   }
 
-  var fetchJSON = _async(function (url, options) {
-    return _await(fetchUrl$1(url, options), function (response) {
-      return _await(response.json());
+  var redirect = _async(function () {
+    return _await(Promise.all([scanBrowserRuntimeFeatures(), fetchExploringJson()]), function (_ref) {
+      var _ref2 = _slicedToArray(_ref, 2),
+          browserRuntimeFeaturesReport = _ref2[0],
+          exploringHtmlFileRelativeUrl = _ref2[1].exploringHtmlFileRelativeUrl;
+
+      if (browserRuntimeFeaturesReport.canAvoidCompilation) {
+        window.location.href = "/".concat(exploringHtmlFileRelativeUrl);
+        return;
+      }
+
+      var outDirectoryRelativeUrl = browserRuntimeFeaturesReport.outDirectoryRelativeUrl,
+          compileId = browserRuntimeFeaturesReport.compileId;
+      window.location.href = "/".concat(outDirectoryRelativeUrl).concat(compileId, "/").concat(exploringHtmlFileRelativeUrl);
     });
   });
 
@@ -1385,200 +1486,8 @@
     };
   }
 
-  var groupPreference = createPreference("group");
-
-  function _call(body, then, direct) {
-    if (direct) {
-      return then ? then(body()) : body();
-    }
-
-    try {
-      var result = Promise.resolve(body());
-      return then ? result.then(then) : result;
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  }
-
-  var run = function run() {
-    return _call(fetchExploringJson, function (_ref) {
-      var projectDirectoryUrl = _ref.projectDirectoryUrl,
-          explorableConfig = _ref.explorableConfig,
-          outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
-      return _await(fetchJSON("/.jsenv/explorables.json", {
-        method: "GET",
-        headers: {
-          "x-jsenv": "1"
-        }
-      }), function (files) {
-        var compileServerOrigin = document.location.origin;
-        var outDirectoryUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin));
-        var groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl));
-        return _await(fetchJSON(groupMapUrl), function (groupMap) {
-          var compileId = computeCompileIdFromGroupId({
-            groupId: resolveBrowserGroup(groupMap),
-            groupMap: groupMap
-          });
-
-          var renderHtml = function renderHtml() {
-            var fileListElement = document.querySelector("[data-page=\"file-list\"]").cloneNode(true);
-            var directoryName = directoryUrlToDirectoryName(projectDirectoryUrl);
-            var span = fileListElement.querySelector("h2 span");
-            span.title = projectDirectoryUrl;
-            span.textContent = directoryName;
-            var h4 = fileListElement.querySelector("h4");
-            var ul = fileListElement.querySelector("ul");
-            ul.innerHTML = files.map(function (file) {
-              return "<li>\n          <a\n            class=\"execution-link\"\n            data-relative-url=".concat(file.relativeUrl, "\n            href=").concat(relativeUrlToCompiledUrl(file.relativeUrl), "\n          >\n            ").concat(file.relativeUrl, "\n          </a>\n        </li>");
-            }).join("");
-            var groupFieldset = fileListElement.querySelector("#filter-group-set");
-            var groupNames = Object.keys(explorableConfig);
-            groupFieldset.innerHTML = groupNames.map(function (key) {
-              return "<label data-contains-hidden-input class=\"item\">\n  <input type=\"radio\" name=\"filter-group\" value=\"".concat(key, "\"/>\n  <span>").concat(key, "</span>\n</label>");
-            }).join("");
-            var currentGroup = groupPreference.has() ? groupPreference.get() : groupNames[0];
-            Array.from(groupFieldset.querySelectorAll("input")).forEach(function (inputRadio) {
-              inputRadio.checked = inputRadio.value === currentGroup;
-
-              inputRadio.onchange = function () {
-                if (inputRadio.checked) {
-                  groupPreference.set(inputRadio.value);
-                  enableGroup(inputRadio.value);
-                }
-              };
-            });
-
-            var enableGroup = function enableGroup(groupName) {
-              var arrayOfElementToShow = [];
-              var arrayOfElementToHide = [];
-              files.forEach(function (file) {
-                var fileLink = fileListElement.querySelector("a[data-relative-url=\"".concat(file.relativeUrl, "\"]"));
-                var fileLi = fileLink.parentNode;
-
-                if (file.meta[groupName]) {
-                  arrayOfElementToShow.push(fileLi);
-                } else {
-                  arrayOfElementToHide.push(fileLi);
-                }
-              });
-              arrayOfElementToShow.forEach(function (element) {
-                element.removeAttribute("data-force-hide");
-              });
-              arrayOfElementToHide.forEach(function (element) {
-                element.setAttribute("data-force-hide", "");
-              });
-              h4.innerHTML = arrayOfElementToShow.length === 0 ? "No file found.\n              Config for this section: <pre>".concat(JSON.stringify(explorableConfig[groupName], null, "  "), "</pre>") : "".concat(arrayOfElementToShow.length, " files found. Click on the one you want to execute");
-            };
-
-            enableGroup(currentGroup);
-            document.querySelector("main").appendChild(fileListElement);
-            makeMenuScrollable();
-          };
-
-          var relativeUrlToCompiledUrl = function relativeUrlToCompiledUrl(relativeUrl) {
-            return "".concat(compileServerOrigin, "/").concat(outDirectoryRelativeUrl).concat(compileId, "/").concat(relativeUrl);
-          };
-
-          var makeMenuScrollable = function makeMenuScrollable() {
-            var getMenuWrapperSize = function getMenuWrapperSize() {
-              return document.querySelector(".menu-wrapper").getBoundingClientRect().width;
-            };
-
-            var menuWrapperSize = getMenuWrapperSize();
-
-            var getMenuSize = function getMenuSize() {
-              return document.querySelector(".menu").getBoundingClientRect().width;
-            };
-
-            var menuSize = getMenuSize();
-            var menuVisibleSize = menuWrapperSize;
-            var menuInvisibleSize = menuSize - menuVisibleSize;
-
-            var getMenuPosition = function getMenuPosition() {
-              return document.querySelector(".menu-wrapper").scrollLeft;
-            };
-
-            var scrollDuration = 300;
-            var leftPaddle = document.querySelector(".left-paddle");
-            var rightPaddle = document.querySelector(".right-paddle");
-
-            var handleMenuScroll = function handleMenuScroll() {
-              menuInvisibleSize = menuSize - menuWrapperSize;
-              var menuPosition = getMenuPosition();
-              var menuEndOffset = menuInvisibleSize; // show & hide the paddles, depending on scroll position
-
-              if (menuPosition <= 0 && menuEndOffset <= 0) {
-                // hide both paddles if the window is large enough to display all tabs
-                leftPaddle.classList.add("hidden");
-                rightPaddle.classList.add("hidden");
-              } else if (menuPosition <= 0) {
-                leftPaddle.classList.add("hidden");
-                rightPaddle.classList.remove("hidden");
-              } else if (menuPosition < Math.floor(menuEndOffset)) {
-                // show both paddles in the middle
-                leftPaddle.classList.remove("hidden");
-                rightPaddle.classList.remove("hidden");
-              } else if (menuPosition >= Math.floor(menuEndOffset)) {
-                leftPaddle.classList.remove("hidden");
-                rightPaddle.classList.add("hidden");
-              }
-            };
-
-            handleMenuScroll();
-
-            window.onresize = function () {
-              menuWrapperSize = getMenuWrapperSize();
-              menuSize = getMenuSize();
-              handleMenuScroll();
-            }; // finally, what happens when we are actually scrolling the menu
-
-
-            document.querySelector(".menu-wrapper").onscroll = function () {
-              handleMenuScroll();
-            }; // scroll to left
-
-
-            rightPaddle.onclick = function () {
-              var scrollStart = document.querySelector(".menu-wrapper").scrollLeft;
-              var scrollEnd = scrollStart + menuWrapperSize;
-              startJavaScriptAnimation({
-                duration: scrollDuration,
-                onProgress: function onProgress(_ref2) {
-                  var progress = _ref2.progress;
-                  document.querySelector(".menu-wrapper").scrollLeft = scrollStart + (scrollEnd - scrollStart) * progress;
-                }
-              });
-            }; // scroll to right
-
-
-            leftPaddle.onclick = function () {
-              var scrollStart = document.querySelector(".menu-wrapper").scrollLeft;
-              var scrollEnd = scrollStart - menuWrapperSize;
-              startJavaScriptAnimation({
-                duration: scrollDuration,
-                onProgress: function onProgress(_ref3) {
-                  var progress = _ref3.progress;
-                  document.querySelector(".menu-wrapper").scrollLeft = scrollStart + (scrollEnd - scrollStart) * progress;
-                }
-              });
-            };
-          };
-
-          var directoryUrlToDirectoryName = function directoryUrlToDirectoryName(directoryUrl) {
-            var slashLastIndex = directoryUrl.lastIndexOf("/", // ignore last slash
-            directoryUrl.length - 2);
-            if (slashLastIndex === -1) return "";
-            return directoryUrl.slice(slashLastIndex + 1);
-          };
-
-          renderHtml();
-        });
-      });
-    });
-  };
-
-  run();
+  redirect();
 
 }());
 
-//# sourceMappingURL=jsenv-exploring-index.js.map
+//# sourceMappingURL=jsenv_exploring_redirector.js.map

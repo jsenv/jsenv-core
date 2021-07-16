@@ -1,6 +1,16 @@
 (function () {
   'use strict';
 
+  var nativeTypeOf = function nativeTypeOf(obj) {
+    return typeof obj;
+  };
+
+  var customTypeOf = function customTypeOf(obj) {
+    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+  };
+
+  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
+
   var _defineProperty = (function (obj, key, value) {
     // Shortcircuit the slow defineProperty path when possible.
     // We are trying to avoid issues where setters defined on the
@@ -21,43 +31,15 @@
     return obj;
   });
 
-  function ownKeys(object, enumerableOnly) {
-    var keys = Object.keys(object);
-
-    if (Object.getOwnPropertySymbols) {
-      var symbols = Object.getOwnPropertySymbols(object);
-
-      if (enumerableOnly) {
-        symbols = symbols.filter(function (sym) {
-          return Object.getOwnPropertyDescriptor(object, sym).enumerable;
-        });
-      }
-
-      keys.push.apply(keys, symbols);
-    }
-
-    return keys;
-  }
-
-  function _objectSpread2(target) {
-    for (var i = 1; i < arguments.length; i++) {
-      var source = arguments[i] != null ? arguments[i] : {};
-
-      if (i % 2) {
-        ownKeys(Object(source), true).forEach(function (key) {
-          _defineProperty(target, key, source[key]);
-        });
-      } else if (Object.getOwnPropertyDescriptors) {
-        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
-      } else {
-        ownKeys(Object(source)).forEach(function (key) {
-          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
-        });
-      }
-    }
-
-    return target;
-  }
+  var createDetailedMessage = function createDetailedMessage(message) {
+    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var string = "".concat(message);
+    Object.keys(details).forEach(function (key) {
+      var value = details[key];
+      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
+    });
+    return string;
+  };
 
   var objectWithoutPropertiesLoose = (function (source, excluded) {
     if (source === null) return {};
@@ -118,34 +100,52 @@
     };
   };
 
-  var nativeTypeOf = function nativeTypeOf(obj) {
-    return typeof obj;
-  };
-
-  var customTypeOf = function customTypeOf(obj) {
-    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-  };
-
-  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
-
   var isCancelError = function isCancelError(value) {
     return value && _typeof(value) === "object" && value.name === "CANCEL_ERROR";
   };
 
-  var createDetailedMessage = function createDetailedMessage(message) {
-    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    var string = "".concat(message);
-    Object.keys(details).forEach(function (key) {
-      var value = details[key];
-      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
-    });
-    return string;
-  };
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+
+      if (enumerableOnly) {
+        symbols = symbols.filter(function (sym) {
+          return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+        });
+      }
+
+      keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i] != null ? arguments[i] : {};
+
+      if (i % 2) {
+        ownKeys(Object(source), true).forEach(function (key) {
+          _defineProperty(target, key, source[key]);
+        });
+      } else if (Object.getOwnPropertyDescriptors) {
+        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+      } else {
+        ownKeys(Object(source)).forEach(function (key) {
+          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+        });
+      }
+    }
+
+    return target;
+  }
 
   // fallback to this polyfill (or even use an existing polyfill would be better)
   // https://github.com/github/fetch/blob/master/fetch.js
 
-  function _await$3(value, then, direct) {
+  function _await$4(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -267,7 +267,7 @@
     }
 
     xhr.send(body);
-    return _await$3(headersPromise, function () {
+    return _await$4(headersPromise, function () {
       // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
       var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
       var responseStatus = xhr.status;
@@ -275,7 +275,7 @@
       var responseHeaders = getHeadersFromXHR(xhr);
 
       var readBody = function readBody() {
-        return _await$3(bodyPromise, function () {
+        return _await$4(bodyPromise, function () {
           var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
           if (status === 0) {
@@ -578,7 +578,9 @@
     return view.buffer;
   };
 
-  function _await$2(value, then, direct) {
+  var _excluded = ["cancellationToken", "mode"];
+
+  function _await$3(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -598,7 +600,7 @@
         cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
         _ref$mode = _ref.mode,
         mode = _ref$mode === void 0 ? "cors" : _ref$mode,
-        options = _objectWithoutProperties(_ref, ["cancellationToken", "mode"]);
+        options = _objectWithoutProperties(_ref, _excluded);
 
     var abortController = new AbortController();
     var cancelError;
@@ -608,7 +610,7 @@
     });
     var response;
     return _continue(_catch$1(function () {
-      return _await$2(window.fetch(url, _objectSpread2({
+      return _await$3(window.fetch(url, _objectSpread2({
         signal: abortController.signal,
         mode: mode
       }, options)), function (_window$fetch) {
@@ -687,6 +689,39 @@
 
   var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 
+  function _await$2(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  function _async$1(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
+  var fetchJson = _async$1(function (url) {
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    return _await$2(fetchUrl(url, options), function (response) {
+      return _await$2(response.json());
+    });
+  });
+
   function _await$1(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
@@ -713,491 +748,6 @@
     return result;
   }
 
-  function _async$1(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
-
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
-
-  var fetchExploringJson = _async$1(function () {
-    var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        cancellationToken = _ref.cancellationToken;
-
-    return _catch(function () {
-      return _await$1(fetchUrl("/.jsenv/exploring.json", {
-        headers: {
-          "x-jsenv": "1"
-        },
-        cancellationToken: cancellationToken
-      }), function (exploringJsonResponse) {
-        return _await$1(exploringJsonResponse.json());
-      });
-    }, function (e) {
-      if (isCancelError(e)) {
-        throw e;
-      }
-
-      throw new Error(createDetailedMessage("Cannot communicate with exploring server due to a network error", _defineProperty({}, "error stack", e.stack)));
-    });
-  });
-
-  var COMPILE_ID_OTHERWISE = "otherwise";
-
-  var computeCompileIdFromGroupId = function computeCompileIdFromGroupId(_ref) {
-    var groupId = _ref.groupId,
-        groupMap = _ref.groupMap;
-
-    if (typeof groupId === "undefined") {
-      if (COMPILE_ID_OTHERWISE in groupMap) {
-        return COMPILE_ID_OTHERWISE;
-      }
-
-      var keys = Object.keys(groupMap);
-
-      if (keys.length === 1) {
-        return keys[0];
-      }
-
-      throw new Error(createUnexpectedGroupIdMessage({
-        groupMap: groupMap
-      }));
-    }
-
-    if (groupId in groupMap === false) {
-      throw new Error(createUnexpectedGroupIdMessage({
-        groupId: groupId,
-        groupMap: groupMap
-      }));
-    }
-
-    return groupId;
-  };
-
-  var createUnexpectedGroupIdMessage = function createUnexpectedGroupIdMessage(_ref2) {
-    var _createDetailedMessag;
-
-    var compileId = _ref2.compileId,
-        groupMap = _ref2.groupMap;
-    return createDetailedMessage("unexpected groupId.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "expected compiled id", Object.keys(groupMap)), _defineProperty(_createDetailedMessag, "received compile id", compileId), _createDetailedMessag));
-  };
-
-  var firstMatch = function firstMatch(regexp, string) {
-    var match = string.match(regexp);
-    return match && match.length > 0 ? match[1] || undefined : undefined;
-  };
-  var secondMatch = function secondMatch(regexp, string) {
-    var match = string.match(regexp);
-    return match && match.length > 1 ? match[2] || undefined : undefined;
-  };
-  var userAgentToVersion = function userAgentToVersion(userAgent) {
-    return firstMatch(/version\/(\d+(\.?_?\d+)+)/i, userAgent) || undefined;
-  };
-
-  var detectAndroid = function detectAndroid() {
-    return navigatorToBrowser$1(window.navigator);
-  };
-
-  var navigatorToBrowser$1 = function navigatorToBrowser(_ref) {
-    var userAgent = _ref.userAgent,
-        appVersion = _ref.appVersion;
-
-    if (/(android)/i.test(userAgent)) {
-      return {
-        name: "android",
-        version: firstMatch(/Android (\d+(\.?_?\d+)+)/i, appVersion)
-      };
-    }
-
-    return null;
-  };
-
-  var detectInternetExplorer = function detectInternetExplorer() {
-    return userAgentToBrowser$5(window.navigator.userAgent);
-  };
-
-  var userAgentToBrowser$5 = function userAgentToBrowser(userAgent) {
-    if (/msie|trident/i.test(userAgent)) {
-      return {
-        name: "ie",
-        version: firstMatch(/(?:msie |rv:)(\d+(\.?_?\d+)+)/i, userAgent)
-      };
-    }
-
-    return null;
-  };
-
-  var detectOpera = function detectOpera() {
-    return userAgentToBrowser$4(window.navigator.userAgent);
-  };
-
-  var userAgentToBrowser$4 = function userAgentToBrowser(userAgent) {
-    // opera below 13
-    if (/opera/i.test(userAgent)) {
-      return {
-        name: "opera",
-        version: userAgentToVersion(userAgent) || firstMatch(/(?:opera)[\s/](\d+(\.?_?\d+)+)/i, userAgent)
-      };
-    } // opera above 13
-
-
-    if (/opr\/|opios/i.test(userAgent)) {
-      return {
-        name: "opera",
-        version: firstMatch(/(?:opr|opios)[\s/](\S+)/i, userAgent) || userAgentToVersion(userAgent)
-      };
-    }
-
-    return null;
-  };
-
-  var detectEdge = function detectEdge() {
-    return userAgentToBrowser$3(window.navigator.userAgent);
-  };
-
-  var userAgentToBrowser$3 = function userAgentToBrowser(userAgent) {
-    if (/edg([ea]|ios)/i.test(userAgent)) {
-      return {
-        name: "edge",
-        version: secondMatch(/edg([ea]|ios)\/(\d+(\.?_?\d+)+)/i, userAgent)
-      };
-    }
-
-    return null;
-  };
-
-  var detectFirefox = function detectFirefox() {
-    return userAgentToBrowser$2(window.navigator.userAgent);
-  };
-
-  var userAgentToBrowser$2 = function userAgentToBrowser(userAgent) {
-    if (/firefox|iceweasel|fxios/i.test(userAgent)) {
-      return {
-        name: "firefox",
-        version: firstMatch(/(?:firefox|iceweasel|fxios)[\s/](\d+(\.?_?\d+)+)/i, userAgent)
-      };
-    }
-
-    return null;
-  };
-
-  var detectChrome = function detectChrome() {
-    return userAgentToBrowser$1(window.navigator.userAgent);
-  };
-
-  var userAgentToBrowser$1 = function userAgentToBrowser(userAgent) {
-    if (/chromium/i.test(userAgent)) {
-      return {
-        name: "chrome",
-        version: firstMatch(/(?:chromium)[\s/](\d+(\.?_?\d+)+)/i, userAgent) || userAgentToVersion(userAgent)
-      };
-    }
-
-    if (/chrome|crios|crmo/i.test(userAgent)) {
-      return {
-        name: "chrome",
-        version: firstMatch(/(?:chrome|crios|crmo)\/(\d+(\.?_?\d+)+)/i, userAgent)
-      };
-    }
-
-    return null;
-  };
-
-  var detectSafari = function detectSafari() {
-    return userAgentToBrowser(window.navigator.userAgent);
-  };
-
-  var userAgentToBrowser = function userAgentToBrowser(userAgent) {
-    if (/safari|applewebkit/i.test(userAgent)) {
-      return {
-        name: "safari",
-        version: userAgentToVersion(userAgent)
-      };
-    }
-
-    return null;
-  };
-
-  var detectElectron = function detectElectron() {
-    return null;
-  }; // TODO
-
-  var detectIOS = function detectIOS() {
-    return navigatorToBrowser(window.navigator);
-  };
-
-  var navigatorToBrowser = function navigatorToBrowser(_ref) {
-    var userAgent = _ref.userAgent,
-        appVersion = _ref.appVersion;
-
-    if (/iPhone;/.test(userAgent)) {
-      return {
-        name: "ios",
-        version: firstMatch(/OS (\d+(\.?_?\d+)+)/i, appVersion)
-      };
-    }
-
-    if (/iPad;/.test(userAgent)) {
-      return {
-        name: "ios",
-        version: firstMatch(/OS (\d+(\.?_?\d+)+)/i, appVersion)
-      };
-    }
-
-    return null;
-  };
-
-  // https://github.com/Ahmdrza/detect-browser/blob/26254f85cf92795655a983bfd759d85f3de850c6/detect-browser.js#L1
-
-  var detectorCompose = function detectorCompose(detectors) {
-    return function () {
-      var i = 0;
-
-      while (i < detectors.length) {
-        var _detector = detectors[i];
-        i++;
-
-        var result = _detector();
-
-        if (result) {
-          return result;
-        }
-      }
-
-      return null;
-    };
-  };
-
-  var detector = detectorCompose([detectOpera, detectInternetExplorer, detectEdge, detectFirefox, detectChrome, detectSafari, detectElectron, detectIOS, detectAndroid]);
-  var detectBrowser = function detectBrowser() {
-    var _ref = detector() || {},
-        _ref$name = _ref.name,
-        name = _ref$name === void 0 ? "other" : _ref$name,
-        _ref$version = _ref.version,
-        version = _ref$version === void 0 ? "unknown" : _ref$version;
-
-    return {
-      name: normalizeName(name),
-      version: normalizeVersion(version)
-    };
-  };
-
-  var normalizeName = function normalizeName(name) {
-    return name.toLowerCase();
-  };
-
-  var normalizeVersion = function normalizeVersion(version) {
-    if (version.indexOf(".") > -1) {
-      var parts = version.split("."); // remove extraneous .
-
-      return parts.slice(0, 3).join(".");
-    }
-
-    if (version.indexOf("_") > -1) {
-      var _parts = version.split("_"); // remove extraneous _
-
-
-      return _parts.slice(0, 3).join("_");
-    }
-
-    return version;
-  };
-
-  var valueToVersion = function valueToVersion(value) {
-    if (typeof value === "number") {
-      return numberToVersion(value);
-    }
-
-    if (typeof value === "string") {
-      return stringToVersion(value);
-    }
-
-    throw new TypeError(createValueErrorMessage({
-      version: value
-    }));
-  };
-
-  var numberToVersion = function numberToVersion(number) {
-    return {
-      major: number,
-      minor: 0,
-      patch: 0
-    };
-  };
-
-  var stringToVersion = function stringToVersion(string) {
-    if (string.indexOf(".") > -1) {
-      var parts = string.split(".");
-      return {
-        major: Number(parts[0]),
-        minor: parts[1] ? Number(parts[1]) : 0,
-        patch: parts[2] ? Number(parts[2]) : 0
-      };
-    }
-
-    if (isNaN(string)) {
-      return {
-        major: 0,
-        minor: 0,
-        patch: 0
-      };
-    }
-
-    return {
-      major: Number(string),
-      minor: 0,
-      patch: 0
-    };
-  };
-
-  var createValueErrorMessage = function createValueErrorMessage(_ref) {
-    var value = _ref.value;
-    return "value must be a number or a string.\nvalue: ".concat(value);
-  };
-
-  var versionCompare = function versionCompare(versionA, versionB) {
-    var semanticVersionA = valueToVersion(versionA);
-    var semanticVersionB = valueToVersion(versionB);
-    var majorDiff = semanticVersionA.major - semanticVersionB.major;
-
-    if (majorDiff > 0) {
-      return majorDiff;
-    }
-
-    if (majorDiff < 0) {
-      return majorDiff;
-    }
-
-    var minorDiff = semanticVersionA.minor - semanticVersionB.minor;
-
-    if (minorDiff > 0) {
-      return minorDiff;
-    }
-
-    if (minorDiff < 0) {
-      return minorDiff;
-    }
-
-    var patchDiff = semanticVersionA.patch - semanticVersionB.patch;
-
-    if (patchDiff > 0) {
-      return patchDiff;
-    }
-
-    if (patchDiff < 0) {
-      return patchDiff;
-    }
-
-    return 0;
-  };
-
-  var versionIsBelow = function versionIsBelow(versionSupposedBelow, versionSupposedAbove) {
-    return versionCompare(versionSupposedBelow, versionSupposedAbove) < 0;
-  };
-
-  var findHighestVersion = function findHighestVersion() {
-    for (var _len = arguments.length, values = new Array(_len), _key = 0; _key < _len; _key++) {
-      values[_key] = arguments[_key];
-    }
-
-    if (values.length === 0) throw new Error("missing argument");
-    return values.reduce(function (highestVersion, value) {
-      if (versionIsBelow(highestVersion, value)) {
-        return value;
-      }
-
-      return highestVersion;
-    });
-  };
-
-  var resolveGroup = function resolveGroup(_ref, groupMap) {
-    var name = _ref.name,
-        version = _ref.version;
-    return Object.keys(groupMap).find(function (compileIdCandidate) {
-      var runtimeCompatMap = groupMap[compileIdCandidate].runtimeCompatMap;
-
-      if (name in runtimeCompatMap === false) {
-        return false;
-      }
-
-      var versionForGroup = runtimeCompatMap[name];
-      var highestVersion = findHighestVersion(version, versionForGroup);
-      return highestVersion === version;
-    });
-  };
-
-  var resolveBrowserGroup = function resolveBrowserGroup(groupMap) {
-    return resolveGroup(detectBrowser(), groupMap);
-  };
-
-  function _await(value, then, direct) {
-    if (direct) {
-      return then ? then(value) : value;
-    }
-
-    if (!value || !value.then) {
-      value = Promise.resolve(value);
-    }
-
-    return then ? value.then(then) : value;
-  }
-
-  var redirect = function redirect() {
-    return _call(fetchExploringJson, function (_ref) {
-      var outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
-          exploringHtmlFileRelativeUrl = _ref.exploringHtmlFileRelativeUrl;
-      return _await(decideExploringIndexUrl({
-        outDirectoryRelativeUrl: outDirectoryRelativeUrl,
-        exploringHtmlFileRelativeUrl: exploringHtmlFileRelativeUrl
-      }), function (_decideExploringIndex) {
-        window.location.href = _decideExploringIndex;
-      });
-    });
-  };
-
-  function _call(body, then, direct) {
-    if (direct) {
-      return then ? then(body()) : body();
-    }
-
-    try {
-      var result = Promise.resolve(body());
-      return then ? result.then(then) : result;
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  }
-
-  var decideExploringIndexUrl = _async(function (_ref2) {
-    var outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
-        exploringHtmlFileRelativeUrl = _ref2.exploringHtmlFileRelativeUrl;
-    // for now it's not possible to avoid compilation
-    // I need to list what is needed to support that
-    // for instance it means we should collect coverage from chrome devtools
-    // instead of instrumenting source code.
-    // It also means we should be able somehow to collect namespace of module imported
-    // by the html page
-    var canAvoidCompilation = false;
-    return _await(canAvoidCompilation , function (_browserSupportsAllFe) {
-      if (_browserSupportsAllFe) {
-        return "/".concat(exploringHtmlFileRelativeUrl);
-      }
-
-      return _await(decideCompileId({
-        outDirectoryRelativeUrl: outDirectoryRelativeUrl
-      }), function (compileId) {
-        return "/".concat(outDirectoryRelativeUrl).concat(compileId, "/").concat(exploringHtmlFileRelativeUrl);
-      });
-    }, !canAvoidCompilation);
-  });
-
   function _async(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
@@ -1212,22 +762,331 @@
     };
   }
 
-  var decideCompileId = _async(function (_ref4) {
-    var outDirectoryRelativeUrl = _ref4.outDirectoryRelativeUrl;
-    var compileServerGroupMapUrl = "/".concat(outDirectoryRelativeUrl, "groupMap.json");
-    return _await(fetchUrl(compileServerGroupMapUrl), function (compileServerGroupMapResponse) {
-      return _await(compileServerGroupMapResponse.json(), function (compileServerGroupMap) {
-        var compileId = computeCompileIdFromGroupId({
-          groupId: resolveBrowserGroup(compileServerGroupMap),
-          groupMap: compileServerGroupMap
-        });
-        return compileId;
-      });
+  var fetchExploringJson = _async(function () {
+    var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        cancellationToken = _ref.cancellationToken;
+
+    return _catch(function () {
+      return _await$1(fetchJson("/.jsenv/exploring.json", {
+        cancellationToken: cancellationToken
+      }));
+    }, function (e) {
+      if (isCancelError(e)) {
+        throw e;
+      }
+
+      throw new Error(createDetailedMessage("Cannot communicate with exploring server due to a network error", _defineProperty({}, "error stack", e.stack)));
     });
   });
 
-  redirect();
+  var setStyles = function setStyles(element, styles) {
+    var elementStyle = element.style;
+    var restoreStyles = Object.keys(styles).map(function (styleName) {
+      var restore;
+
+      if (styleName in elementStyle) {
+        var currentStyle = elementStyle[styleName];
+
+        restore = function restore() {
+          elementStyle[styleName] = currentStyle;
+        };
+      } else {
+        restore = function restore() {
+          delete elementStyle[styleName];
+        };
+      }
+
+      elementStyle[styleName] = styles[styleName];
+      return restore;
+    });
+    return function () {
+      restoreStyles.forEach(function (restore) {
+        return restore();
+      });
+    };
+  };
+  var setAttributes = function setAttributes(element, attributes) {
+    Object.keys(attributes).forEach(function (name) {
+      element.setAttribute(name, attributes[name]);
+    });
+  };
+
+  /*
+  We must connect to livereload server asap so that if a file is modified
+  while page is loading we are notified of it.
+
+  Otherwise it's possible that a file is loaded and used by browser then its modified before
+  livereload connection is established.
+
+  When toolbar is loaded it will open an other connection to server sent events and close this one.
+  */
+
+  function _await(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  var connectLivereload = function connectLivereload() {
+    var _window = window,
+        EventSource = _window.EventSource;
+
+    if (typeof EventSource !== "function") {
+      return function () {};
+    }
+
+    var getLivereloadPreference = function getLivereloadPreference() {
+      return localStorage.hasOwnProperty("livereload") ? JSON.parse(localStorage.getItem("livereload")) : true;
+    };
+
+    var url = document.location.href;
+    var isOpen = false;
+    var lastEventId;
+    var latestChangeMap = {};
+    var events = {
+      "file-modified": function fileModified(_ref) {
+        var data = _ref.data;
+        latestChangeMap[data] = "modified";
+
+        if (getLivereloadPreference()) {
+          window.location.reload(true);
+        }
+      },
+      "file-removed": function fileRemoved(_ref2) {
+        var data = _ref2.data;
+        latestChangeMap[data] = "removed";
+
+        if (getLivereloadPreference()) {
+          window.location.reload(true);
+        }
+      },
+      "file-added": function fileAdded(_ref3) {
+        var data = _ref3.data;
+        latestChangeMap[data] = "added";
+
+        if (getLivereloadPreference()) {
+          window.location.reload(true);
+        }
+      }
+    };
+    var eventSourceOrigin = new URL(url).origin;
+    var eventSource = new EventSource(url, {
+      withCredentials: true
+    });
+
+    var disconnect = function disconnect() {
+      eventSource.close();
+    };
+
+    eventSource.onopen = function () {
+      isOpen = true;
+    };
+
+    eventSource.onerror = function (errorEvent) {
+      if (errorEvent.target.readyState === EventSource.CLOSED) {
+        isOpen = false;
+      }
+    };
+
+    Object.keys(events).forEach(function (eventName) {
+      eventSource.addEventListener(eventName, function (e) {
+        if (e.origin === eventSourceOrigin) {
+          if (e.lastEventId) {
+            lastEventId = e.lastEventId;
+          }
+
+          events[eventName](e);
+        }
+      });
+    });
+    return function () {
+      return {
+        isOpen: isOpen,
+        latestChangeMap: latestChangeMap,
+        lastEventId: lastEventId,
+        disconnect: disconnect
+      };
+    };
+  }; // eslint-disable-next-line camelcase
+
+
+  function _call(body, then, direct) {
+    if (direct) {
+      return then ? then(body()) : body();
+    }
+
+    try {
+      var result = Promise.resolve(body());
+      return then ? result.then(then) : result;
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  window.__jsenv_eventsource__ = connectLivereload();
+
+  var injectToolbar = function injectToolbar() {
+    return _call(fetchExploringJson, function (_ref4) {
+      var jsenvDirectoryRelativeUrl = _ref4.jsenvDirectoryRelativeUrl;
+      var jsenvDirectoryServerUrl = resolveUrl(jsenvDirectoryRelativeUrl, document.location.origin);
+      var placeholder = getToolbarPlaceholder();
+      var iframe = document.createElement("iframe");
+      setAttributes(iframe, {
+        tabindex: -1,
+        // sandbox: "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
+        // allow: "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
+        allowtransparency: true
+      });
+      setStyles(iframe, {
+        "position": "fixed",
+        "zIndex": 1000,
+        "bottom": 0,
+        "left": 0,
+        "width": "100%",
+        "height": 0,
+
+        /* ensure toolbar children are not focusable when hidden */
+        "visibility": "hidden",
+        "transition-duration": "300ms",
+        "transition-property": "height, visibility",
+        "border": "none"
+      });
+      var iframeLoadedPromise = iframeToLoadedPromise(iframe);
+      var jsenvToolbarHtmlServerUrl = resolveUrl("./src/internal/toolbar/toolbar.html", jsenvDirectoryServerUrl); // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
+
+      iframe.setAttribute("src", jsenvToolbarHtmlServerUrl);
+      placeholder.parentNode.replaceChild(iframe, placeholder);
+      return _await(iframeLoadedPromise, function () {
+        iframe.removeAttribute("tabindex");
+
+        var listenToolbarIframeEvent = function listenToolbarIframeEvent(event, fn) {
+          window.addEventListener("message", function (messageEvent) {
+            var data = messageEvent.data;
+            if (_typeof(data) !== "object") return;
+            var jsenv = data.jsenv;
+            if (!jsenv) return;
+            var type = data.type;
+            if (type !== event) return;
+            fn(data.value);
+          }, false);
+        };
+
+        listenToolbarIframeEvent("toolbar-visibility-change", function (visible) {
+          if (visible) {
+            hideToolbarTrigger();
+          } else {
+            showToolbarTrigger();
+          }
+        });
+        var div = document.createElement("div");
+        var jsenvLogoUrl = resolveUrl("./src/internal/toolbar/jsenv-logo.svg", jsenvDirectoryServerUrl);
+        var jsenvLogoSvgSrc = jsenvLogoUrl;
+        div.innerHTML = "\n<div id=\"jsenv-toolbar-trigger\">\n  <svg id=\"jsenv-toolbar-trigger-icon\">\n    <use xlink:href=\"".concat(jsenvLogoSvgSrc, "#jsenv-logo\"></use>\n  </svg>\n  <style>\n    #jsenv-toolbar-trigger {\n      display: block;\n      overflow: hidden;\n      position: fixed;\n      z-index: 1000;\n      bottom: -32px;\n      right: 20px;\n      height: 40px;\n      width: 40px;\n      padding: 0;\n      border-radius: 5px 5px 0 0;\n      border: 1px solid rgba(0, 0, 0, 0.33);\n      border-bottom: none;\n      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);\n      background: transparent;\n      text-align: center;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger:hover {\n      cursor: pointer;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] {\n      bottom: 0;\n    }\n\n    #jsenv-toolbar-trigger-icon {\n      width: 35px;\n      height: 35px;\n      opacity: 0;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] #jsenv-toolbar-trigger-icon {\n      opacity: 1;\n    }\n  </style>\n</div>");
+        var toolbarTrigger = div.firstElementChild;
+        iframe.parentNode.appendChild(toolbarTrigger);
+        var timer;
+
+        toolbarTrigger.onmouseenter = function () {
+          toolbarTrigger.setAttribute("data-animate", "");
+          timer = setTimeout(expandToolbarTrigger, 500);
+        };
+
+        toolbarTrigger.onmouseleave = function () {
+          clearTimeout(timer);
+          collapseToolbarTrigger();
+        };
+
+        toolbarTrigger.onfocus = function () {
+          toolbarTrigger.removeAttribute("data-animate");
+          expandToolbarTrigger();
+        };
+
+        toolbarTrigger.onblur = function () {
+          toolbarTrigger.removeAttribute("data-animate");
+          clearTimeout(timer);
+          collapseToolbarTrigger();
+        };
+
+        toolbarTrigger.onclick = function () {
+          window.__jsenv__.toolbar.show();
+        };
+
+        var showToolbarTrigger = function showToolbarTrigger() {
+          toolbarTrigger.style.display = "block";
+        };
+
+        var hideToolbarTrigger = function hideToolbarTrigger() {
+          toolbarTrigger.style.display = "none";
+        };
+
+        var expandToolbarTrigger = function expandToolbarTrigger() {
+          toolbarTrigger.setAttribute("data-expanded", "");
+        };
+
+        var collapseToolbarTrigger = function collapseToolbarTrigger() {
+          toolbarTrigger.removeAttribute("data-expanded", "");
+        };
+
+        hideToolbarTrigger();
+        iframe.contentWindow.renderToolbar();
+        return iframe;
+      });
+    });
+  };
+
+  var getToolbarPlaceholder = function getToolbarPlaceholder() {
+    var placeholder = queryPlaceholder();
+
+    if (placeholder) {
+      if (document.body.contains(placeholder)) {
+        return placeholder;
+      } // otherwise iframe would not be visible because in <head>
+
+
+      console.warn("element with [data-jsenv-toolbar-placeholder] must be inside document.body");
+      return createTooolbarPlaceholder();
+    }
+
+    return createTooolbarPlaceholder();
+  };
+
+  var queryPlaceholder = function queryPlaceholder() {
+    return document.querySelector("[data-jsenv-toolbar-placeholder]");
+  };
+
+  var createTooolbarPlaceholder = function createTooolbarPlaceholder() {
+    var placeholder = document.createElement("span");
+    document.body.appendChild(placeholder);
+    return placeholder;
+  };
+
+  var iframeToLoadedPromise = function iframeToLoadedPromise(iframe) {
+    return new Promise(function (resolve) {
+      var onload = function onload() {
+        iframe.removeEventListener("load", onload, true);
+        resolve();
+      };
+
+      iframe.addEventListener("load", onload, true);
+    });
+  };
+
+  var resolveUrl = function resolveUrl(url, baseUrl) {
+    return String(new URL(url, baseUrl));
+  };
+
+  if (document.readyState === "complete") {
+    injectToolbar();
+  } else {
+    window.addEventListener("load", injectToolbar);
+  }
 
 }());
 
-//# sourceMappingURL=jsenv-exploring-redirector.js.map
+//# sourceMappingURL=jsenv_toolbar_injector.js.map

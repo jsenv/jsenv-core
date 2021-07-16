@@ -1,5 +1,6 @@
 @import "./animation/animation.css";
 @import "./execution/execution.css";
+@import "./compilation/compilation.css";
 @import "./focus/focus.css";
 @import "./eventsource/eventsource.css";
 @import "./responsive/overflow-menu.css";
@@ -181,3 +182,7 @@ html[data-toolbar-visible] #toolbar-trigger {
 /* #jsenvLogo {
   transition: 600ms;
 } */
+
+#toolbar a {
+  color: inherit;
+}

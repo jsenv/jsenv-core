@@ -26,7 +26,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 })
 const compiledFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
 
-const test = async ({ nodeRuntimeDecision } = {}) => {
+const test = async ({ canUseNativeModuleSystem } = {}) => {
   const result = await launchAndExecute({
     ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
     launchAndExecuteLogLevel: "off",
@@ -36,7 +36,7 @@ const test = async ({ nodeRuntimeDecision } = {}) => {
         ...options,
         outDirectoryRelativeUrl,
         compileServerOrigin,
-        nodeRuntimeDecision,
+        canUseNativeModuleSystem,
       }),
     executeParams: {
       fileRelativeUrl,
@@ -56,7 +56,7 @@ const test = async ({ nodeRuntimeDecision } = {}) => {
 // with systemjs
 {
   const actual = await test({
-    nodeRuntimeDecision: "systemjs",
+    canUseNativeModuleSystem: false,
   })
   const parsingError = {
     message: `${filePath}: Unexpected token (1:14)

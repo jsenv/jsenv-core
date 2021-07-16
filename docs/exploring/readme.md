@@ -118,9 +118,9 @@ Example of a custom `watchConfig`:
 </details>
 
 <details>
-  <summary>toolbar</summary>
+  <summary>jsenvToolbar</summary>
 
-`toolbar` parameter is a boolean controlling if a script loading jsenv toolbar will be injected into html files. This parameter is optional and enabled by default.
+`jsenvToolbar` parameter is a boolean controlling if a script loading jsenv toolbar will be injected into html files. This parameter is optional and enabled by default.
 
 The image below is a screenshot of this toolbar.
 

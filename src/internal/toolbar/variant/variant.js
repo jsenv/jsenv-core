@@ -1,34 +1,58 @@
 export const enableVariant = (rootNode, variables) => {
-  let nodesWithAttribute = Array.from(rootNode.querySelectorAll(`[${attributeName}]`))
-  let nodesWithActiveAttribute = Array.from(
-    rootNode.querySelectorAll(`[${attributeNameWhenActive}]`),
+  const nodesNotMatching = Array.from(
+    rootNode.querySelectorAll(`[${attributeIndicatingACondition}]`),
   )
+  nodesNotMatching.forEach((nodeNotMatching) => {
+    const conditionAttributeValue = nodeNotMatching.getAttribute(attributeIndicatingACondition)
+    const matches = testCondition(conditionAttributeValue, variables)
+    if (matches) {
+      renameAttribute(nodeNotMatching, attributeIndicatingACondition, attributeIndicatingAMatch)
+    }
+  })
 
-  Object.keys(variables).forEach((key) => {
-    const variableValue = variables[key]
-
-    nodesWithAttribute = nodesWithAttribute.filter((node) => {
-      const [keyCandidate, value] = node.getAttribute(attributeName).split(":")
-      if (keyCandidate !== key) return true
-      if (value !== variableValue) return true
-
-      renameAttribute(node, attributeName, attributeNameWhenActive)
-      return false
-    })
-
-    nodesWithActiveAttribute = nodesWithActiveAttribute.filter((node) => {
-      const [keyCandidate, value] = node.getAttribute(attributeNameWhenActive).split(":")
-      if (keyCandidate !== key) return true
-      if (value === variableValue) return true
-
-      renameAttribute(node, attributeNameWhenActive, attributeName)
-      return false
-    })
+  const nodesMatching = Array.from(rootNode.querySelectorAll(`[${attributeIndicatingAMatch}]`))
+  nodesMatching.forEach((nodeMatching) => {
+    const conditionAttributeValue = nodeMatching.getAttribute(attributeIndicatingAMatch)
+    const matches = testCondition(conditionAttributeValue, variables)
+    if (!matches) {
+      renameAttribute(nodeMatching, attributeIndicatingAMatch, attributeIndicatingACondition)
+    }
   })
 }
 
-const attributeNameWhenActive = `data-when-active`
-const attributeName = `data-when`
+const testCondition = (conditionAttributeValue, variables) => {
+  const condition = parseCondition(conditionAttributeValue)
+  return Object.keys(variables).some((key) => {
+    if (condition.key !== key) {
+      return false
+    }
+    // the condition do not specify a value, any value is ok
+    if (condition.value === undefined) {
+      return true
+    }
+    if (condition.value === variables[key]) {
+      return true
+    }
+    return false
+  })
+}
+
+const parseCondition = (conditionAttributeValue) => {
+  const colonIndex = conditionAttributeValue.indexOf(":")
+  if (colonIndex === -1) {
+    return {
+      key: conditionAttributeValue,
+      value: undefined,
+    }
+  }
+  return {
+    key: conditionAttributeValue.slice(0, colonIndex),
+    value: conditionAttributeValue.slice(colonIndex + 1),
+  }
+}
+
+const attributeIndicatingACondition = `data-when`
+const attributeIndicatingAMatch = `data-when-active`
 
 const renameAttribute = (node, name, newName) => {
   node.setAttribute(newName, node.getAttribute(name))

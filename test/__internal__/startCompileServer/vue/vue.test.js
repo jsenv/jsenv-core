@@ -20,7 +20,9 @@ const compiledFileRelativeUrl = `${jsenvDirectoryRelativeUrl}out/${COMPILE_ID_OT
   const { origin: compileServerOrigin } = await startCompileServer({
     ...COMPILE_SERVER_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
-    customCompilers: [jsenvCompilerForVue],
+    customCompilers: {
+      ...jsenvCompilerForVue,
+    },
   })
   const vueServerUrl = `${compileServerOrigin}/${compiledFileRelativeUrl}`
   const response = await fetchUrl(vueServerUrl, { ignoreHttpsError: true })

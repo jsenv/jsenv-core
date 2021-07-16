@@ -20,46 +20,55 @@ const filename = `${testDirectoryname}.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
+  // compileServerLogLevel: "info",
   jsenvDirectoryRelativeUrl,
 })
 
-await launchBrowsers([launchChromium, launchFirefox, launchWebkit], async (launchBrowser) => {
-  const actual = await launchAndExecute({
-    ...EXECUTION_TEST_PARAMS,
-    launch: (options) =>
-      launchBrowser({
-        ...LAUNCH_TEST_PARAMS,
-        ...options,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-        // headless: false,
-      }),
-    executeParams: {
-      fileRelativeUrl,
-    },
-    captureConsole: true,
-    stopAfterExecute: true,
-  })
-  const expected = {
-    status: "completed",
-    namespace: {
-      [`./${testDirectoryname}.js`]: {
-        status: "completed",
-        namespace: {},
+await launchBrowsers(
+  [
+    // ensure multiline
+    launchChromium,
+    launchFirefox,
+    launchWebkit,
+  ],
+  async (launchBrowser) => {
+    const actual = await launchAndExecute({
+      ...EXECUTION_TEST_PARAMS,
+      launch: (options) =>
+        launchBrowser({
+          ...LAUNCH_TEST_PARAMS,
+          ...options,
+          outDirectoryRelativeUrl,
+          compileServerOrigin,
+          // headless: false,
+        }),
+      executeParams: {
+        fileRelativeUrl,
       },
-    },
-    consoleCalls: [
-      {
-        type: "log",
-        text: `foo
+      captureConsole: true,
+      stopAfterExecute: true,
+    })
+    const expected = {
+      status: "completed",
+      namespace: {
+        [`./${testDirectoryname}.js`]: {
+          status: "completed",
+          namespace: {},
+        },
+      },
+      consoleCalls: [
+        {
+          type: "log",
+          text: `foo
 `,
-      },
-      {
-        type: "log",
-        text: `bar
+        },
+        {
+          type: "log",
+          text: `bar
 `,
-      },
-    ],
-  }
-  assert({ actual, expected })
-})
+        },
+      ],
+    }
+    assert({ actual, expected })
+  },
+)

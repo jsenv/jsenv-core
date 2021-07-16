@@ -10,7 +10,7 @@ export const createNodeRuntime = async ({
   projectDirectoryUrl,
   compileServerOrigin,
   outDirectoryRelativeUrl,
-  nodeRuntimeDecision = "auto",
+  canUseNativeModuleSystem,
 }) => {
   const outDirectoryServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
   const groupMapServerUrl = String(new URL("groupMap.json", outDirectoryServerUrl))
@@ -27,15 +27,14 @@ export const createNodeRuntime = async ({
     groupMap,
   })
   const groupInfo = groupMap[compileId]
-  const runtime =
-    nodeRuntimeDecision === "auto"
-      ? await decideNodeRuntime({
-          groupInfo,
-          importDefaultExtension,
-        })
-      : nodeRuntimeDecision
+  if (canUseNativeModuleSystem === undefined) {
+    canUseNativeModuleSystem = await nodeRuntimeSupportsAllFeatures({
+      groupInfo,
+      importDefaultExtension,
+    })
+  }
 
-  if (runtime === "node") {
+  if (canUseNativeModuleSystem) {
     return createNodeExecutionWithDynamicImport({
       projectDirectoryUrl,
       compileServerOrigin,
@@ -57,17 +56,7 @@ const importJson = async (url) => {
   return object
 }
 
-const decideNodeRuntime = async ({ groupInfo, importDefaultExtension }) => {
-  const canBypassCompilation = await nodeRuntimeSupportsAllFeatures(groupInfo, {
-    importDefaultExtension,
-  })
-  if (canBypassCompilation) {
-    return "node"
-  }
-  return "systemjs"
-}
-
-const nodeRuntimeSupportsAllFeatures = async (groupInfo, { importDefaultExtension }) => {
+const nodeRuntimeSupportsAllFeatures = async ({ groupInfo, importDefaultExtension }) => {
   // node native resolution will not auto add extension
   if (importDefaultExtension) {
     return false

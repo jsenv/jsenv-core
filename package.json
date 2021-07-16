@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "18.2.0",
+  "version": "19.0.0",
   "description": "Tool to develop, test and build js projects.",
   "license": "MIT",
   "repository": {
@@ -133,7 +133,7 @@
     "source-map": "0.7.3",
     "string-width": "5.0.0",
     "supports-color": "9.0.1",
-    "systemjs": "6.10.1",
+    "systemjs": "6.10.2",
     "terser": "5.7.0",
     "tree-kill": "1.2.2",
     "v8-to-istanbul": "8.0.0",

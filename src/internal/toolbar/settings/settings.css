@@ -154,3 +154,22 @@ To be able to apply an outline to this element later*/
   transform: translateX(1.6em);
   background-color: #24b1b0;
 }
+
+.settings-box-item[data-disabled] {
+  background-color: rgba(12, 17, 27, 0.4);
+  cursor: default;
+}
+.settings-box-item[data-disabled] .category-title,
+.settings-box-item[data-disabled] .switch,
+.settings-box-item[data-disabled] .category-subtitle {
+  opacity: 0.4;
+}
+.settings-box-item[data-disabled] .category-title span {
+  text-decoration: line-through;
+}
+.settings-box-item[data-disabled] .category-subtitle {
+  text-decoration: line-through;
+}
+.settings-box-item[data-disabled] .switch {
+  cursor: default;
+}

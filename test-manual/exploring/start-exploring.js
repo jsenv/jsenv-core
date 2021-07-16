@@ -38,7 +38,10 @@ startExploring({
       [`./${testDirectoryRelativeUrl}**/*.html`]: true,
     },
   },
-  customCompilers: [jsenvCompilerForSass, jsenvCompilerForVue],
+  customCompilers: {
+    ...jsenvCompilerForSass,
+    ...jsenvCompilerForVue,
+  },
   jsenvDirectoryRelativeUrl,
   compileServerProtocol: "https",
   compileServerPort: 3456,
@@ -47,5 +50,6 @@ startExploring({
   stopOnPackageVersionChange: false,
   // useFilesystemAsCache: false,
   // writeOnFileSystem: false,
-  compileGroupCount: 1,
+  compileGroupCount: 2,
+  // livereloading: false,
 })

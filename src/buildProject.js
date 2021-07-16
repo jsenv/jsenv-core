@@ -138,6 +138,10 @@ export const buildProject = async ({
 
       compileServerCanReadFromFileSystem: filesystemCache,
       compileServerCanWriteOnFilesystem: filesystemCache,
+      // keep source html untouched
+      // here we don't need to inline importmap
+      // nor to inject jsenv script
+      transformHtmlSourceFiles: false,
 
       // override with potential custom options
       ...rest,

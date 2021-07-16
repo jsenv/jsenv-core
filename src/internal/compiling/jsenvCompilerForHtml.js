@@ -1,8 +1,12 @@
 import { urlToContentType } from "@jsenv/server"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 
+import {
+  jsenvBrowserSystemFileInfo,
+  jsenvToolbarHtmlFileInfo,
+  jsenvToolbarInjectorFileInfo,
+} from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { getDefaultImportMap } from "@jsenv/core/src/internal/import-resolution/importmap-default.js"
-import { jsenvToolbarHtmlUrl } from "../jsenvInternalFiles.js"
 import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { compileIdToBabelPluginMap } from "./jsenvCompilerForJavaScript.js"
@@ -19,7 +23,7 @@ import {
 } from "./compileHtml.js"
 import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
 
-export const jsenvCompilerForHtml = ({
+const compileHtmlFile = ({
   // cancellationToken,
   // logger,
   // request,
@@ -36,13 +40,21 @@ export const jsenvCompilerForHtml = ({
   moduleOutFormat,
   importMetaFormat,
 
-  jsenvBrowserBuildUrlRelativeToProject,
-  scriptInjections,
+  jsenvToolbarInjection,
 }) => {
   const contentType = urlToContentType(originalFileUrl)
   if (contentType !== "text/html") {
     return null
   }
+
+  const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
+    jsenvBrowserSystemFileInfo.jsenvBuildUrl,
+    projectDirectoryUrl,
+  )
+  const jsenvToolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
+    jsenvToolbarInjectorFileInfo.jsenvBuildUrl,
+    projectDirectoryUrl,
+  )
 
   return {
     compile: async (htmlBeforeCompilation) => {
@@ -57,10 +69,13 @@ export const jsenvCompilerForHtml = ({
           {
             src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
           },
-          // todo: this is dirty because it means
-          // compile server is aware of exploring and jsenv toolbar
-          // instead this should be moved to startExploring
-          ...(originalFileUrl === jsenvToolbarHtmlUrl ? [] : scriptInjections),
+          ...(jsenvToolbarInjection && originalFileUrl !== jsenvToolbarHtmlFileInfo.url
+            ? [
+                {
+                  src: `/${jsenvToolbarInjectorBuildRelativeUrlForProject}`,
+                },
+              ]
+            : []),
         ],
       })
       const { scripts } = parseHtmlAstRessources(htmlAst)
@@ -82,7 +97,7 @@ export const jsenvCompilerForHtml = ({
           removeHtmlNodeAttribute(script, srcAttribute)
           setHtmlNodeText(
             script,
-            `window.__jsenv__.importFile(${JSON.stringify(srcAttribute.value)})`,
+            `window.__jsenv__.executeFileUsingSystemJs(${JSON.stringify(srcAttribute.value)})`,
           )
           return
         }
@@ -98,7 +113,10 @@ export const jsenvCompilerForHtml = ({
 
           removeHtmlNodeAttribute(script, typeAttribute)
           removeHtmlNodeAttribute(script, srcAttribute)
-          setHtmlNodeText(script, `window.__jsenv__.importFile(${JSON.stringify(specifier)})`)
+          setHtmlNodeText(
+            script,
+            `window.__jsenv__.executeFileUsingSystemJs(${JSON.stringify(specifier)})`,
+          )
           return
         }
       })
@@ -188,4 +206,8 @@ export const jsenvCompilerForHtml = ({
       }
     },
   }
+}
+
+export const jsenvCompilerForHtml = {
+  "jsenv-compiler-html": compileHtmlFile,
 }

@@ -29,7 +29,9 @@ const fetchSourceAsText = async (urlRelativeToSourcemap, sourceMapUrl) => {
   const { origin: compileServerOrigin } = await startCompileServer({
     ...COMPILE_SERVER_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
-    customCompilers: [jsenvCompilerForSass],
+    customCompilers: {
+      ...jsenvCompilerForSass,
+    },
   })
   const cssServerUrl = `${compileServerOrigin}/${compiledFileRelativeUrl}`
   const response = await fetchUrl(cssServerUrl, { ignoreHttpsError: true })

@@ -221,12 +221,12 @@
                   Send system notification when execution fails or is fixed.
                 </div>
               </div>
-              <div class="settings-box-item">
+              <div class="settings-box-item settings-livereload">
                 <div class="category-title">
                   <svg width="20px" height="20px">
                     <use xlink:href="./toolbar-loading-icon.svg#toolbar-loading-icon"></use>
                   </svg>
-                  Livereload
+                  <span>Livereload</span>
                 </div>
                 <label class="switch" data-contains-hidden-input>
                   <input id="toggle-livereload" type="checkbox" />
@@ -269,6 +269,59 @@
                     <div class="square"></div>
                   </div>
                 </label>
+              </div>
+              <div id="compilation_info" class="settings-box-item">
+                <div class="category-title">
+                  <svg id="compilationSvg" width="20px" height="20px">
+                    <use xlink:href="./compilation/info.svg#icon"></use>
+                  </svg>
+                  Compiled or not?
+                </div>
+                <div class="category-subtitle">
+                  <div data-when="compileInfo:pending">...</div>
+                  <div data-when="compileInfo:source_and_compilation_is_optional">
+                    <ul>
+                      <li>Source files are used</li>
+                      <li>Compilation is optional <span class="emoji">❤️</span></li>
+                    </ul>
+                    <a class="go_to_compiled_link" href="javascript:void(0);"
+                      >Go to compiled files</a
+                    >
+                  </div>
+                  <div data-when="compileInfo:compiled_and_compilation_is_optional">
+                    <ul>
+                      <li>The files shown are compiled</li>
+                      <li>Compilation is optional <span class="emoji">❤️</span></li>
+                    </ul>
+                    <a class="go_to_source_link" href="javascript:void(0);"
+                      >Go to source files (not compiled)</a
+                    >
+                  </div>
+                  <div data-when="compileInfo:source_and_compilation_is_required">
+                    <ul>
+                      <li>Source files are used</li>
+                      <li>
+                        Compilation is
+                        <a class="required_reasons_link" href="javascript:void(0);">required</a>
+                      </li>
+                    </ul>
+                    <a class="go_to_compiled_link" href="javascript:void(0);"
+                      >Go to compiled file</a
+                    >
+                  </div>
+                  <div data-when="compileInfo:compiled_and_compilation_is_required">
+                    <ul>
+                      <li>The files shown are compiled</li>
+                      <li>
+                        Compilation is
+                        <a class="required_reasons_link" href="javascript:void(0);">required</a>
+                      </li>
+                    </ul>
+                    <a class="go_to_source_link" href="javascript:void(0);"
+                      >Go to source files (not compiled)</a
+                    >
+                  </div>
+                </div>
               </div>
             </div>
           </div>

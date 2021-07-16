@@ -1,5 +1,6 @@
-import { extname } from "path"
-import { resolveUrl, assertFilePresence } from "@jsenv/util"
+import { resolveUrl, assertFilePresence, urlToRelativeUrl, urlToExtension } from "@jsenv/util"
+
+import { jsenvCompileProxyHtmlFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { composeIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage/composeIstanbulCoverages.js"
 
 import { evalSource } from "../runtime/createNodeRuntime/evalSource.js"
@@ -14,41 +15,84 @@ export const executeHtmlFile = async (
     outDirectoryRelativeUrl,
     page,
     // measurePerformance,
-    collectPerformance,
     collectCoverage,
+    collectPerformance,
   },
 ) => {
   const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
-  if (extname(fileUrl) !== ".html") {
+  if (urlToExtension(fileUrl) !== ".html") {
     throw new Error(`the file to execute must use .html extension, received ${fileRelativeUrl}.`)
   }
 
   await assertFilePresence(fileUrl)
 
-  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}otherwise/`
-  const compileDirectoryRemoteUrl = resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin)
-  const fileClientUrl = resolveUrl(fileRelativeUrl, compileDirectoryRemoteUrl)
-  await page.goto(fileClientUrl, { timeout: 0 })
+  const compileProxyProjectRelativeUrl = urlToRelativeUrl(
+    jsenvCompileProxyHtmlFileInfo.url,
+    projectDirectoryUrl,
+  )
+  const compileProxyClientUrl = resolveUrl(compileProxyProjectRelativeUrl, compileServerOrigin)
+  await page.goto(compileProxyClientUrl)
 
-  await page.waitForFunction(
+  const browserRuntimeFeaturesReport = await page.evaluate(
     /* istanbul ignore next */
     () => {
       // eslint-disable-next-line no-undef
-      return Boolean(window.__jsenv__)
+      return window.scanBrowserRuntimeFeatures()
     },
-    [],
-    { timeout: 0 },
   )
+  // ici si on peut avoid compilation alors on pourrait visiter la page de base
+  // mais il faudrait alors un moyen d'obtenir:
+  // coverage et namespace des scripts qui s'éxécute
 
-  let executionResult
   try {
-    executionResult = await page.evaluate(
-      /* istanbul ignore next */
-      () => {
-        // eslint-disable-next-line no-undef
-        return window.__jsenv__.executionResultPromise
-      },
-    )
+    let executionResult
+    const { compileId } = browserRuntimeFeaturesReport
+    if (compileId) {
+      executionResult = await executeCompiledVersion({
+        projectDirectoryUrl,
+        compileServerOrigin,
+        fileRelativeUrl,
+        page,
+        outDirectoryRelativeUrl,
+        compileId,
+        collectCoverage,
+      })
+    } else {
+      executionResult = await executeSource({
+        projectDirectoryUrl,
+        compileServerOrigin,
+        fileRelativeUrl,
+        page,
+        collectCoverage,
+      })
+    }
+
+    if (collectPerformance) {
+      const performance = await page.evaluate(
+        /* istanbul ignore next */
+        () => {
+          // eslint-disable-next-line no-undef
+          const { performance } = window
+          if (!performance) {
+            return null
+          }
+
+          const measures = {}
+          const measurePerfEntries = performance.getEntriesByType("measure")
+          measurePerfEntries.forEach((measurePerfEntry) => {
+            measures[measurePerfEntry.name] = measurePerfEntry.duration
+          })
+
+          return {
+            timeOrigin: performance.timeOrigin,
+            timing: performance.timing.toJSON(),
+            navigation: performance.navigation.toJSON(),
+            measures,
+          }
+        },
+      )
+      executionResult.performance = performance
+    }
   } catch (e) {
     // if browser is closed due to cancellation
     // before it is able to finish evaluate we can safely ignore
@@ -62,6 +106,78 @@ export const executeHtmlFile = async (
 
     throw e
   }
+}
+
+const executeSource = async ({
+  projectDirectoryUrl,
+  compileServerOrigin,
+  fileRelativeUrl,
+  page,
+  collectCoverage,
+}) => {
+  let transformResult = (result) => result
+
+  if (collectCoverage) {
+    await page.coverage.startJSCoverage()
+    transformResult = composeTransformer(transformResult, async (result) => {
+      const coverage = await page.coverage.stopJSCoverage()
+      return {
+        ...result,
+        coverage,
+      }
+    })
+  }
+
+  const fileClientUrl = resolveUrl(fileRelativeUrl, `${compileServerOrigin}/`)
+  await page.goto(fileClientUrl, { timeout: 0 })
+
+  const executionResult = await page.evaluate(
+    /* istanbul ignore next */
+    () => {
+      // eslint-disable-next-line no-undef
+      return window.__jsenv__.executionResultPromise
+    },
+  )
+
+  const { fileExecutionResultMap } = executionResult
+  const fileErrored = Object.keys(fileExecutionResultMap).find((fileRelativeUrl) => {
+    const fileExecutionResult = fileExecutionResultMap[fileRelativeUrl]
+    return fileExecutionResult.status === "errored"
+  })
+
+  if (fileErrored) {
+    const { exceptionSource } = fileExecutionResultMap[fileErrored]
+    return transformResult({
+      status: "errored",
+      error: evalException(exceptionSource, { projectDirectoryUrl, compileServerOrigin }),
+      namespace: fileExecutionResultMap,
+    })
+  }
+
+  return transformResult(executionResult)
+}
+
+const executeCompiledVersion = async ({
+  projectDirectoryUrl,
+  compileServerOrigin,
+  fileRelativeUrl,
+  page,
+  outDirectoryRelativeUrl,
+  compileId,
+  collectCoverage,
+}) => {
+  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
+  const compileDirectoryRemoteUrl = resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin)
+  const fileClientUrl = resolveUrl(fileRelativeUrl, compileDirectoryRemoteUrl)
+  await page.goto(fileClientUrl, { timeout: 0 })
+
+  const executionResult = await page.evaluate(
+    /* istanbul ignore next */
+    () => {
+      // eslint-disable-next-line no-undef
+      return window.__jsenv__.executionResultPromise
+    },
+  )
 
   const { fileExecutionResultMap } = executionResult
 
@@ -83,7 +199,6 @@ export const executeHtmlFile = async (
       error: evalException(exceptionSource, { projectDirectoryUrl, compileServerOrigin }),
       namespace: fileExecutionResultMap,
       ...(collectCoverage ? { coverage: generateCoverageForPage(fileExecutionResultMap) } : {}),
-      ...(collectPerformance ? { performance: executionResult.performance } : {}),
     }
   }
 
@@ -91,7 +206,6 @@ export const executeHtmlFile = async (
     status: "completed",
     namespace: fileExecutionResultMap,
     ...(collectCoverage ? { coverage: generateCoverageForPage(fileExecutionResultMap) } : {}),
-    ...(collectPerformance ? { performance: executionResult.performance } : {}),
   }
 }
 
@@ -120,4 +234,11 @@ const evalException = (exceptionSource, { projectDirectoryUrl, compileServerOrig
   }
 
   return error
+}
+
+const composeTransformer = (previousTransformer, transformer) => {
+  return (value) => {
+    const transformedValue = previousTransformer(value)
+    return transformer(transformedValue)
+  }
 }

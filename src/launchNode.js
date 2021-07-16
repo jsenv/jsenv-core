@@ -44,7 +44,7 @@ export const launchNode = async ({
   stdout,
   stderr,
   stopAfterExecute,
-  nodeRuntimeDecision,
+  canUseNativeModuleSystem,
 
   remap = true,
 }) => {
@@ -144,7 +144,7 @@ export const launchNode = async ({
 
       fileRelativeUrl,
       executionId,
-      nodeRuntimeDecision,
+      canUseNativeModuleSystem,
       exitAfterAction: stopAfterExecute,
 
       measurePerformance,

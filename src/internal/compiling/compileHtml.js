@@ -275,6 +275,10 @@ export const replaceHtmlNode = (node, replacement, { inheritAttributes = true } 
 }
 
 export const manipulateHtmlAst = (htmlAst, { scriptInjections = [] }) => {
+  if (scriptInjections.length === 0) {
+    return
+  }
+
   const htmlNode = htmlAst.childNodes.find((node) => node.nodeName === "html")
   const headNode = htmlNode.childNodes[0]
   const bodyNode = htmlNode.childNodes[1]

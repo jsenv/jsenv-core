@@ -7,13 +7,19 @@ import { toggleTooltip, removeAutoShowTooltip, autoShowTooltip } from "../toolti
 import { connectCompileServerEventSource } from "./connectCompileServerEventSource.js"
 
 const livereloadingPreference = createPreference("livereloading")
+let eventSourceState = "default"
+let livereloadingAvailableOnServer = false
 
-export const initToolbarEventSource = ({ executedFileRelativeUrl }) => {
+export const initToolbarEventSource = ({ executedFileRelativeUrl, livereloading }) => {
   removeForceHideElement(document.querySelector("#eventsource-indicator"))
   connectEventSource(executedFileRelativeUrl)
+  livereloadingAvailableOnServer = livereloading
+  if (!livereloadingAvailableOnServer) {
+    disableLivereloadSetting()
+  }
 
   const livereloadCheckbox = document.querySelector("#toggle-livereload")
-  livereloadCheckbox.checked = getLivereloadingPreference()
+  livereloadCheckbox.checked = shouldLivereload()
   livereloadCheckbox.onchange = () => {
     livereloadingPreference.set(livereloadCheckbox.checked)
     updateEventSourceIndicator()
@@ -21,9 +27,20 @@ export const initToolbarEventSource = ({ executedFileRelativeUrl }) => {
   updateEventSourceIndicator()
 }
 
+const shouldLivereload = () => {
+  return livereloadingAvailableOnServer && getLivereloadingPreference()
+}
+
+const disableLivereloadSetting = () => {
+  document.querySelector(".settings-livereload").setAttribute("data-disabled", "true")
+  document
+    .querySelector(".settings-livereload")
+    .setAttribute("title", `Livereload not available: disabled by server`)
+  document.querySelector("#toggle-livereload").disabled = true
+}
+
 const parentEventSource = window.parent.__jsenv_eventsource__()
 const latestChangeMap = parentEventSource.latestChangeMap
-let eventSourceState = "default"
 let eventSourceHooks = {}
 let eventSourceConnection
 let connectionReadyPromise
@@ -31,8 +48,7 @@ let connectionReadyPromise
 const handleFileChange = (file, type) => {
   latestChangeMap[file] = type
   updateEventSourceIndicator()
-  const livereloadingEnabled = getLivereloadingPreference()
-  if (livereloadingEnabled) {
+  if (shouldLivereload()) {
     if (file.endsWith(".css") || file.endsWith(".scss") || file.endsWith(".sass")) {
       reloadAllCss()
       delete latestChangeMap[file]
@@ -138,7 +154,7 @@ const updateEventSourceIndicator = () => {
   const changeCount = Object.keys(latestChangeMap).length
   enableVariant(eventSourceIndicator, {
     eventsource: eventSourceState,
-    livereload: getLivereloadingPreference() ? "on" : "off",
+    livereload: shouldLivereload() ? "on" : "off",
     changes: changeCount > 0 ? "yes" : "no",
   })
 

@@ -15,7 +15,7 @@ export const execute = async ({
   collectCoverage,
   measurePerformance,
   collectPerformance,
-  nodeRuntimeDecision,
+  canUseNativeModuleSystem,
 }) => {
   let finalizeExecutionResult = (result) => result
 
@@ -56,7 +56,7 @@ export const execute = async ({
     projectDirectoryUrl,
     compileServerOrigin,
     outDirectoryRelativeUrl,
-    nodeRuntimeDecision,
+    canUseNativeModuleSystem,
   })
 
   const executionResult = await executeFile(fileRelativeUrl, {

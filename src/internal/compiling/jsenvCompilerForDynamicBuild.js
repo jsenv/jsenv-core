@@ -7,6 +7,7 @@ import {
   urlToFilename,
 } from "@jsenv/util"
 import { urlToContentType } from "@jsenv/server"
+
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import {
   COMPILE_ID_BUILD_GLOBAL,
@@ -21,7 +22,7 @@ import { transformResultToCompilationResult } from "./transformResultToCompilati
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { compileIdToBabelPluginMap } from "./jsenvCompilerForJavaScript.js"
 
-export const jsenvCompilerForDynamicBuild = ({ compileId, originalFileUrl, ...rest }) => {
+const compileDynamicBuildFile = ({ compileId, originalFileUrl, ...rest }) => {
   const contentType = urlToContentType(originalFileUrl)
 
   if (contentType !== "application/javascript" && contentType !== "text/javascript") {
@@ -48,6 +49,10 @@ export const jsenvCompilerForDynamicBuild = ({ compileId, originalFileUrl, ...re
   }
 
   return null
+}
+
+export const jsenvCompilerForDynamicBuild = {
+  "jsenv-compiler-dynamic-build": compileDynamicBuildFile,
 }
 
 const handleDynamicBuild = ({

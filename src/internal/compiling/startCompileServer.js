@@ -26,19 +26,25 @@ import {
   registerDirectoryLifecycle,
   urlIsInsideOf,
   urlToBasename,
+  urlToExtension,
 } from "@jsenv/util"
 
-import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
-import { babelPluginReplaceExpressions } from "../babel-plugin-replace-expressions.js"
-import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
 import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
 import { jsenvBrowserScoreMap } from "../../jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "../../jsenvNodeVersionScoreMap.js"
 import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
+import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
 import { createCallbackList } from "../createCallbackList.js"
+import {
+  jsenvCompileProxyFileInfo,
+  sourcemapMainFileInfo,
+  sourcemapMappingFileInfo,
+} from "../jsenvInternalFiles.js"
+import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
+import { babelPluginReplaceExpressions } from "../babel-plugin-replace-expressions.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
 import { urlIsCompilationAsset } from "./compile-directory/compile-asset.js"
-import { sourcemapMainFileUrl, sourcemapMappingFileUrl } from "../jsenvInternalFiles.js"
+import { transformHTMLSourceFile } from "./transformHTMLSourceFile.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -71,7 +77,7 @@ export const startCompileServer = async ({
   replaceMap = {},
   babelPluginMap = jsenvBabelPluginMap,
   convertMap = {},
-  customCompilers = [],
+  customCompilers = {},
 
   // options related to the server itself
   compileServerProtocol = "https",
@@ -98,7 +104,10 @@ export const startCompileServer = async ({
   livereloadLogLevel = "info",
   customServices = {},
   livereloadSSE = false,
-  scriptInjections = [],
+  transformHtmlSourceFiles = true,
+  jsenvToolbarInjection = false,
+  jsenvScriptInjection = true,
+  inlineImportMapIntoHTML = true,
 }) => {
   assertArguments({
     projectDirectoryUrl,
@@ -166,6 +175,19 @@ export const startCompileServer = async ({
       "service:livereload sse": serveSSEForLivereload,
       ...customServices,
     }
+  } else {
+    const roomWhenLivereloadIsDisabled = createSSERoom()
+    roomWhenLivereloadIsDisabled.open()
+    customServices = {
+      "service:livereload sse": (request) => {
+        const { accept } = request.headers
+        if (!accept || !accept.includes("text/event-stream")) {
+          return null
+        }
+        return roomWhenLivereloadIsDisabled.join(request)
+      },
+      ...customServices,
+    }
   }
 
   const outJSONFiles = createOutJSONFiles({
@@ -175,6 +197,9 @@ export const startCompileServer = async ({
     importDefaultExtension,
     compileServerGroupMap,
     env,
+    convertMap,
+    inlineImportMapIntoHTML,
+    customCompilers,
   })
   if (compileServerCanWriteOnFilesystem) {
     await setupOutDirectory({
@@ -201,6 +226,9 @@ export const startCompileServer = async ({
       outDirectoryUrl,
       outJSONFiles,
     }),
+    "service: compile proxy": createCompileProxyService({
+      projectDirectoryUrl,
+    }),
     "service:compiled file": createCompiledFileService({
       cancellationToken,
       logger,
@@ -217,7 +245,7 @@ export const startCompileServer = async ({
       customCompilers,
       moduleOutFormat,
       importMetaFormat,
-      scriptInjections,
+      jsenvToolbarInjection,
 
       projectFileRequestedCallback,
       useFilesystemAsCache: compileServerCanReadFromFilesystem,
@@ -226,9 +254,14 @@ export const startCompileServer = async ({
       compileCacheStrategy,
     }),
     "service:project file": createProjectFileService({
+      logger,
       projectDirectoryUrl,
       projectFileRequestedCallback,
       projectFileEtagEnabled,
+      transformHtmlSourceFiles,
+      inlineImportMapIntoHTML,
+      jsenvScriptInjection,
+      jsenvToolbarInjection,
     }),
   }
 
@@ -706,18 +739,17 @@ const createCompilationAssetFileService = ({ projectDirectoryUrl }) => {
 }
 
 const createBrowserScriptService = ({ projectDirectoryUrl, outDirectoryRelativeUrl }) => {
-  const sourcemapMainFileRelativeUrl = urlToRelativeUrl(sourcemapMainFileUrl, projectDirectoryUrl)
+  const sourcemapMainFileRelativeUrl = urlToRelativeUrl(
+    sourcemapMainFileInfo.url,
+    projectDirectoryUrl,
+  )
   const sourcemapMappingFileRelativeUrl = urlToRelativeUrl(
-    sourcemapMappingFileUrl,
+    sourcemapMappingFileInfo.url,
     projectDirectoryUrl,
   )
 
   return (request) => {
-    if (
-      request.method === "GET" &&
-      request.ressource === "/.jsenv/compile-meta.json" &&
-      "x-jsenv" in request.headers
-    ) {
+    if (request.method === "GET" && request.ressource === "/.jsenv/compile-meta.json") {
       const body = JSON.stringify({
         outDirectoryRelativeUrl,
         errorStackRemapping: true,
@@ -741,14 +773,53 @@ const createBrowserScriptService = ({ projectDirectoryUrl, outDirectoryRelativeU
 }
 
 const createProjectFileService = ({
+  logger,
   projectDirectoryUrl,
   projectFileRequestedCallback,
   projectFileEtagEnabled,
+  transformHtmlSourceFiles,
+  inlineImportMapIntoHTML,
+  jsenvScriptInjection,
+  jsenvToolbarInjection,
 }) => {
-  return (request) => {
+  return async (request) => {
     const { ressource } = request
     const relativeUrl = ressource.slice(1)
     projectFileRequestedCallback(relativeUrl, request)
+
+    const requestUrl = resolveUrl(ressource, request.origin)
+    if (transformHtmlSourceFiles && urlToExtension(requestUrl) === ".html") {
+      const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
+      let fileContent
+      try {
+        fileContent = await readFile(fileUrl, { as: "string" })
+      } catch (e) {
+        if (e.code === "ENOENT") {
+          return {
+            status: 404,
+          }
+        }
+        throw e
+      }
+      const htmlTransformed = await transformHTMLSourceFile({
+        logger,
+        projectDirectoryUrl,
+        fileUrl,
+        fileContent,
+        inlineImportMapIntoHTML,
+        jsenvScriptInjection,
+        jsenvToolbarInjection,
+      })
+      return {
+        status: 200,
+        headers: {
+          "content-type": "text/html",
+          "content-length": Buffer.byteLength(htmlTransformed),
+          "cache-control": "no-cache",
+        },
+        body: htmlTransformed,
+      }
+    }
 
     const responsePromise = serveFile(request, {
       rootDirectoryUrl: projectDirectoryUrl,
@@ -770,6 +841,8 @@ const createOutJSONFiles = ({
   replaceProcessEnvNodeEnv,
   processEnvNodeEnv,
   env,
+  inlineImportMapIntoHTML,
+  customCompilers,
 }) => {
   const outJSONFiles = {}
   const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
@@ -797,6 +870,9 @@ const createOutJSONFiles = ({
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
     importDefaultExtension,
+    inlineImportMapIntoHTML,
+    customCompilerNames: Object.keys(customCompilers),
+    convertPatterns: Object.keys(convertMap),
   }
   outJSONFiles.env = {
     url: envOutFileUrl,
@@ -876,6 +952,27 @@ const createOutFilesService = async ({
       },
       body,
     }
+  }
+}
+
+const createCompileProxyService = ({ projectDirectoryUrl }) => {
+  const jsenvCompileProxyRelativeUrlForProject = urlToRelativeUrl(
+    jsenvCompileProxyFileInfo.jsenvBuildUrl,
+    projectDirectoryUrl,
+  )
+
+  return (request) => {
+    if (request.ressource === "/.jsenv/jsenv_compile_proxy.js") {
+      const jsenvCompileProxyBuildServerUrl = `${request.origin}/${jsenvCompileProxyRelativeUrlForProject}`
+      return {
+        status: 307,
+        headers: {
+          location: jsenvCompileProxyBuildServerUrl,
+        },
+      }
+    }
+
+    return null
   }
 }
 

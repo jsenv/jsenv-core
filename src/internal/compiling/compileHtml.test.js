@@ -83,7 +83,7 @@ const compileHtml = (
   <body>
     <script src="foo.js"></script>
     <script async="">
-      window.__jsenv__.importFile("bar.js")
+      window.__jsenv__.executeFileUsingSystemJs("bar.js")
     </script>
 ${`  ` /* this is for prettier */}
 </body></html>`
@@ -105,7 +105,7 @@ ${`  ` /* this is for prettier */}
   const actual = htmlAfterCompilation
   const expected = `<html><head>
     <script>
-      window.__jsenv__.importFile("./8d473bbc.js")
+      window.__jsenv__.executeFileUsingSystemJs("./8d473bbc.js")
     </script>
   </head>
   <body>

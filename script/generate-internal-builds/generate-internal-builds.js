@@ -2,11 +2,12 @@
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
-  jsenvBrowserSystemRelativeUrl,
-  jsenvExploringRedirectorJsRelativeUrl,
-  jsenvExploringIndexJsRelativeUrl,
-  jsenvToolbarInjectorRelativeUrl,
-  jsenvToolbarJsRelativeUrl,
+  jsenvBrowserSystemFileInfo,
+  jsenvCompileProxyFileInfo,
+  jsenvExploringRedirectorJsFileInfo,
+  jsenvExploringIndexJsFileInfo,
+  jsenvToolbarInjectorFileInfo,
+  jsenvToolbarJsFileInfo,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 
 const commonParams = {
@@ -20,35 +21,46 @@ const buildsToGenerate = [
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvBrowserSystemRelativeUrl]: "./jsenv-browser-system.js",
+      [jsenvBrowserSystemFileInfo.jsenvRelativeUrl]:
+        jsenvBrowserSystemFileInfo.jsenvBuildRelativeUrl,
     },
   },
   {
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvExploringRedirectorJsRelativeUrl]: "./jsenv-exploring-redirector.js",
+      [jsenvCompileProxyFileInfo.jsenvRelativeUrl]: jsenvCompileProxyFileInfo.jsenvBuildRelativeUrl,
     },
   },
   {
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvExploringIndexJsRelativeUrl]: "./jsenv-exploring-index.js",
+      [jsenvExploringRedirectorJsFileInfo.jsenvRelativeUrl]:
+        jsenvExploringRedirectorJsFileInfo.jsenvBuildRelativeUrl,
     },
   },
   {
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvToolbarInjectorRelativeUrl]: "./jsenv-toolbar-injector.js",
+      [jsenvExploringIndexJsFileInfo.jsenvRelativeUrl]:
+        jsenvExploringIndexJsFileInfo.jsenvBuildRelativeUrl,
     },
   },
   {
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvToolbarJsRelativeUrl]: "./jsenv-toolbar.js",
+      [jsenvToolbarInjectorFileInfo.jsenvRelativeUrl]:
+        jsenvToolbarInjectorFileInfo.jsenvBuildRelativeUrl,
+    },
+  },
+  {
+    ...commonParams,
+    format: "global",
+    entryPointMap: {
+      [jsenvToolbarJsFileInfo.jsenvRelativeUrl]: jsenvToolbarJsFileInfo.jsenvBuildRelativeUrl,
     },
   },
 ]

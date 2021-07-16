@@ -22,7 +22,9 @@ const { buildMappings } = await buildProject({
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
-  customCompilers: [jsenvCompilerForSass],
+  customCompilers: {
+    ...jsenvCompilerForSass,
+  },
 })
 
 const mainScssBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.scss`]

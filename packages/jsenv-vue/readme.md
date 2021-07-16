@@ -25,7 +25,7 @@ Add a `customCompilers` export into `jsenv.config.js`:
 ```js
 import { jsenvCompilerForVue } from "@jsenv/vue"
 
-export const customCompilers = [jsenvCompilerForVue]
+export const customCompilers = { ...jsenvCompilerForVue }
 ```
 
 </details>

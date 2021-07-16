@@ -1,6 +1,13 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/util"
+import {
+  resolveDirectoryUrl,
+  urlToRelativeUrl,
+  urlToBasename,
+  resolveUrl,
+  readFile,
+} from "@jsenv/util"
+
+import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { parseCssUrls } from "@jsenv/core/src/internal/building/css/parseCssUrls.js"
 import {
@@ -8,11 +15,10 @@ import {
   BROWSER_IMPORT_BUILD_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
-import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryRelativeUrl)
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.html`

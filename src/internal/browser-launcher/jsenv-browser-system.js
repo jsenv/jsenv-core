@@ -1,5 +1,6 @@
 /* eslint-env browser */
 
+import { unevalException } from "../unevalException.js"
 import { createBrowserRuntime } from "../runtime/createBrowserRuntime/createBrowserRuntime.js"
 import { installBrowserErrorStackRemapping } from "../error-stack-remapping/installBrowserErrorStackRemapping.js"
 import { fetchUrl } from "../browser-utils/fetch-browser.js"
@@ -55,11 +56,34 @@ const executionResultPromise = readyPromise.then(async () => {
     startTime: navigationStartTime,
     endTime: Date.now(),
     fileExecutionResultMap,
-    performance: readPerformance(),
   }
 })
 
-const importFile = (specifier) => {
+const executeFileUsingDynamicImport = async (specifier) => {
+  const { currentScript } = document
+  const fileExecutionResultPromise = (async () => {
+    try {
+      const url = new URL(specifier, document.location.href).href
+      const namespace = await import(url)
+      const executionResult = {
+        status: "completed",
+        namespace,
+      }
+      return executionResult
+    } catch (e) {
+      const executionResult = {
+        status: "errored",
+        exceptionSource: unevalException(e),
+      }
+      onExecutionError(executionResult, { currentScript })
+      return executionResult
+    }
+  })()
+  fileExecutionMap[specifier] = fileExecutionResultPromise
+  return fileExecutionResultPromise
+}
+
+const executeFileUsingSystemJs = (specifier) => {
   // si on a déja importer ce fichier ??
   // if (specifier in fileExecutionMap) {
 
@@ -110,11 +134,7 @@ const onExecutionError = (executionResult, { currentScript }) => {
 
 const getBrowserRuntime = memoize(async () => {
   const compileServerOrigin = document.location.origin
-  const compileMetaResponse = await fetchUrl(`${compileServerOrigin}/.jsenv/compile-meta.json`, {
-    headers: {
-      "x-jsenv": true,
-    },
-  })
+  const compileMetaResponse = await fetchUrl(`${compileServerOrigin}/.jsenv/compile-meta.json`)
   const compileMeta = await compileMetaResponse.json()
   const { outDirectoryRelativeUrl, errorStackRemapping } = compileMeta
   const outDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
@@ -161,29 +181,8 @@ const getBrowserRuntime = memoize(async () => {
   return browserRuntime
 })
 
-const readPerformance = () => {
-  if (!window.performance) {
-    return null
-  }
-
-  return {
-    timeOrigin: window.performance.timeOrigin,
-    timing: window.performance.timing.toJSON(),
-    navigation: window.performance.navigation.toJSON(),
-    measures: readPerformanceMeasures(),
-  }
-}
-
-const readPerformanceMeasures = () => {
-  const measures = {}
-  const measurePerfEntries = window.performance.getEntriesByType("measure")
-  measurePerfEntries.forEach((measurePerfEntry) => {
-    measures[measurePerfEntry.name] = measurePerfEntry.duration
-  })
-  return measures
-}
-
 window.__jsenv__ = {
   executionResultPromise,
-  importFile,
+  executeFileUsingDynamicImport,
+  executeFileUsingSystemJs,
 }
